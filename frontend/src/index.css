@@ -1,0 +1,5 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body { @apply text-white; background-image: url('https://www.shutterstock.com/image-illustration/3d-render-open-air-football-600nw-2472453001.jpg'); background-size: cover; background-position: center; background-attachment: fixed; }

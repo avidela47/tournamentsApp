@@ -4,7 +4,14 @@ import Card from "../components/Card.jsx";
 
 const TournamentPage = () => {
   const [tournaments, setTournaments] = useState([]);
-  const [formData, setFormData] = useState({ name: "", location: "", logo: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    logo: "",
+    rounds: "",
+    teamsCount: "",
+    startDate: "",
+    endDate: "",
+  });
   const [editId, setEditId] = useState(null);
 
   useEffect(() => {
@@ -12,8 +19,12 @@ const TournamentPage = () => {
   }, []);
 
   const fetchTournaments = async () => {
-    const res = await axios.get("http://localhost:5000/api/tournaments");
-    setTournaments(res.data);
+    try {
+      const res = await axios.get("http://localhost:5000/api/tournaments");
+      setTournaments(res.data);
+    } catch (err) {
+      console.error("Error cargando torneos:", err);
+    }
   };
 
   const handleChange = (e) =>
@@ -21,28 +32,46 @@ const TournamentPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editId) {
-      await axios.put(`http://localhost:5000/api/tournaments/${editId}`, formData);
-    } else {
-      await axios.post("http://localhost:5000/api/tournaments", formData);
+    try {
+      if (editId) {
+        await axios.put(`http://localhost:5000/api/tournaments/${editId}`, formData);
+      } else {
+        await axios.post("http://localhost:5000/api/tournaments", formData);
+      }
+      setFormData({
+        name: "",
+        logo: "",
+        rounds: "",
+        teamsCount: "",
+        startDate: "",
+        endDate: "",
+      });
+      setEditId(null);
+      fetchTournaments();
+    } catch (err) {
+      console.error("Error guardando torneo:", err);
     }
-    setFormData({ name: "", location: "", logo: "" });
-    setEditId(null);
-    fetchTournaments();
   };
 
-  const handleEdit = (tournament) => {
+  const handleEdit = (t) => {
     setFormData({
-      name: tournament.name,
-      location: tournament.location,
-      logo: tournament.logo || ""
+      name: t.name,
+      logo: t.logo || "",
+      rounds: t.rounds || "",
+      teamsCount: t.teamsCount || "",
+      startDate: t.startDate ? t.startDate.slice(0, 10) : "",
+      endDate: t.endDate ? t.endDate.slice(0, 10) : "",
     });
-    setEditId(tournament._id);
+    setEditId(t._id);
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/tournaments/${id}`);
-    fetchTournaments();
+    try {
+      await axios.delete(`http://localhost:5000/api/tournaments/${id}`);
+      fetchTournaments();
+    } catch (err) {
+      console.error("Error eliminando torneo:", err);
+    }
   };
 
   return (
@@ -66,19 +95,45 @@ const TournamentPage = () => {
 
         <input
           type="text"
-          name="location"
-          placeholder="Ubicación"
-          value={formData.location}
+          name="logo"
+          placeholder="URL del logo"
+          value={formData.logo}
+          onChange={handleChange}
+          className="w-full p-2 mb-3 border rounded text-black"
+        />
+
+        <input
+          type="number"
+          name="rounds"
+          placeholder="Cantidad de fechas"
+          value={formData.rounds}
           onChange={handleChange}
           className="w-full p-2 mb-3 border rounded text-black"
           required
         />
 
         <input
-          type="text"
-          name="logo"
-          placeholder="URL del logo/banner"
-          value={formData.logo}
+          type="number"
+          name="teamsCount"
+          placeholder="Cantidad de equipos"
+          value={formData.teamsCount}
+          onChange={handleChange}
+          className="w-full p-2 mb-3 border rounded text-black"
+          required
+        />
+
+        <input
+          type="date"
+          name="startDate"
+          value={formData.startDate}
+          onChange={handleChange}
+          className="w-full p-2 mb-3 border rounded text-black"
+        />
+
+        <input
+          type="date"
+          name="endDate"
+          value={formData.endDate}
           onChange={handleChange}
           className="w-full p-2 mb-3 border rounded text-black"
         />
@@ -92,27 +147,40 @@ const TournamentPage = () => {
       </form>
 
       {/* Listado */}
-      <div className="flex flex-wrap justify-center gap-6 w-full max-w-4xl">
-        {tournaments.map((tournament) => (
-          <Card key={tournament._id}>
-            {tournament.logo && (
-              <img
-                src={tournament.logo}
-                alt={tournament.name}
-                className="w-full h-32 object-contain mb-3"
-              />
+      <div className="flex flex-wrap justify-center gap-6 w-full max-w-5xl">
+        {tournaments.map((t) => (
+          <Card key={t._id}>
+            <div className="flex items-center gap-3 mb-4">
+              {t.logo && (
+                <img
+                  src={t.logo}
+                  alt={t.name}
+                  className="w-12 h-12 object-contain"
+                />
+              )}
+              <h2 className="text-xl font-bold text-black">{t.name}</h2>
+            </div>
+            <p className="text-sm text-gray-600">Fechas: {t.rounds}</p>
+            <p className="text-sm text-gray-600">Equipos: {t.teamsCount || 0}</p>
+            {t.startDate && (
+              <p className="text-sm text-gray-600">
+                Desde: {new Date(t.startDate).toLocaleDateString()}
+              </p>
             )}
-            <h2 className="text-lg font-bold text-center">{tournament.name}</h2>
-            <p className="text-center">Ubicación: {tournament.location}</p>
-            <div className="flex gap-3 mt-3 justify-center">
+            {t.endDate && (
+              <p className="text-sm text-gray-600">
+                Hasta: {new Date(t.endDate).toLocaleDateString()}
+              </p>
+            )}
+            <div className="flex gap-2 mt-4 justify-center">
               <button
-                onClick={() => handleEdit(tournament)}
+                onClick={() => handleEdit(t)}
                 className="bg-yellow-500 text-white px-3 py-1 rounded"
               >
                 Editar
               </button>
               <button
-                onClick={() => handleDelete(tournament._id)}
+                onClick={() => handleDelete(t._id)}
                 className="bg-red-500 text-white px-3 py-1 rounded"
               >
                 Eliminar
@@ -126,7 +194,4 @@ const TournamentPage = () => {
 };
 
 export default TournamentPage;
-
-
-
 

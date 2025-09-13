@@ -1,95 +1,119 @@
 import express from "express";
-import multer from "multer";
 import Player from "../models/Player.js";
 import Team from "../models/Team.js";
 
 const router = express.Router();
 
-// Configuración de multer para guardar imágenes en /uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const upload = multer({ storage });
-
 // ============================
-// GET todos los jugadores
+// Obtener todos los jugadores (con equipo y escudo)
 // ============================
 router.get("/", async (req, res) => {
   try {
-    const players = await Player.find().populate("team");
+    const players = await Player.find()
+      .populate({
+        path: "team", // 👈 el campo en Player debe ser "team"
+        select: "name logo tournament",
+        populate: { path: "tournament", select: "name" },
+      });
+
     res.json(players);
-  } catch (error) {
-    res.status(500).json({ message: "Error al obtener jugadores", error });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
 // ============================
-// POST agregar jugador
+// Crear jugador
 // ============================
-router.post("/", upload.single("photo"), async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const { name, position, team } = req.body;
+    const { name, position, photo, team } = req.body;
 
     // Validar que el equipo exista
     const existingTeam = await Team.findById(team);
     if (!existingTeam) {
-      return res.status(400).json({ message: "El equipo no existe" });
+      return res.status(400).json({ message: "Equipo no encontrado" });
     }
 
-    const newPlayer = new Player({
-      name,
-      position,
-      team,
-      photo: req.file ? `/uploads/${req.file.filename}` : null,
+    const player = new Player({ name, position, photo, team });
+    const savedPlayer = await player.save();
+
+    // Devolver el jugador populado
+    const populated = await savedPlayer.populate({
+      path: "team",
+      select: "name logo tournament",
+      populate: { path: "tournament", select: "name" },
     });
 
-    await newPlayer.save();
-    res.json(newPlayer);
-  } catch (error) {
-    res.status(500).json({ message: "Error al crear jugador", error });
+    res.status(201).json(populated);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 
 // ============================
-// PUT editar jugador
+// Actualizar jugador
 // ============================
-router.put("/:id", upload.single("photo"), async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
-    const { name, position, team } = req.body;
-    const updateData = { name, position, team };
+    const { name, position, photo, team } = req.body;
 
-    if (req.file) {
-      updateData.photo = `/uploads/${req.file.filename}`;
-    }
-
-    const updatedPlayer = await Player.findByIdAndUpdate(
+    const player = await Player.findByIdAndUpdate(
       req.params.id,
-      updateData,
+      { name, position, photo, team },
       { new: true }
-    );
+    ).populate({
+      path: "team",
+      select: "name logo tournament",
+      populate: { path: "tournament", select: "name" },
+    });
 
-    res.json(updatedPlayer);
-  } catch (error) {
-    res.status(500).json({ message: "Error al editar jugador", error });
+    if (!player) return res.status(404).json({ message: "Jugador no encontrado" });
+
+    res.json(player);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 
 // ============================
-// DELETE eliminar jugador
+// Eliminar jugador
 // ============================
 router.delete("/:id", async (req, res) => {
   try {
-    await Player.findByIdAndDelete(req.params.id);
+    const deleted = await Player.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Jugador no encontrado" });
     res.json({ message: "Jugador eliminado" });
-  } catch (error) {
-    res.status(500).json({ message: "Error al eliminar jugador", error });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ============================
+// Listar jugadores de un torneo (por equipos asociados)
+// ============================
+router.get("/tournament/:tournamentId", async (req, res) => {
+  try {
+    const id = req.params.tournamentId;
+
+    // Buscar equipos del torneo
+    const teams = await Team.find({
+      $or: [{ tournament: id }, { tournamentId: id }], // soporte ambos nombres
+    }).select("_id");
+
+    // Buscar jugadores de esos equipos
+    const players = await Player.find({ team: { $in: teams.map((t) => t._id) } })
+      .populate({
+        path: "team",
+        select: "name logo tournament",
+        populate: { path: "tournament", select: "name" },
+      });
+
+    res.json(players);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
 export default router;
+

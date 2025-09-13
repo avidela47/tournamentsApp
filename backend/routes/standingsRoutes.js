@@ -1,102 +1,86 @@
 import express from "express";
 import Match from "../models/Match.js";
 import Team from "../models/Team.js";
-import Tournament from "../models/Tournament.js";
 
 const router = express.Router();
 
-// GET standings filtrados por torneo (por nombre)
-router.get("/:tournamentName", async (req, res) => {
+// GET /api/standings/:tournamentId
+router.get("/:tournamentId", async (req, res) => {
   try {
-    const { tournamentName } = req.params;
+    const { tournamentId } = req.params;
 
-    // Buscar torneo por nombre
-    const tournament = await Tournament.findOne({ name: tournamentName });
-    if (!tournament) {
-      return res.status(404).json({ message: "Torneo no encontrado" });
-    }
+    const teams = await Team.find({ tournament: tournamentId });
+    const matches = await Match.find({ tournament: tournamentId });
 
-    // Obtener todos los equipos
-    const teams = await Team.find();
-
-    // Inicializar tabla con nuevos campos
+    // Inicializar tabla
     const standings = teams.map((team) => ({
+      teamId: team._id,
       team: team.name,
+      logo: team.logo, // 👈 agregamos logo del equipo
       played: 0,
       wins: 0,
       draws: 0,
       losses: 0,
-      goalsFor: 0,     // GF
-      goalsAgainst: 0, // GC
-      goalDiff: 0,     // DG
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDiff: 0,
       points: 0,
     }));
 
-    // Diccionario para actualizar rápido
-    const standingsMap = {};
-    standings.forEach((s) => (standingsMap[s.team] = s));
+    const standingsMap = new Map();
+    standings.forEach((s) => standingsMap.set(s.teamId.toString(), s));
 
-    // Obtener solo partidos de este torneo
-    const matches = await Match.find({ tournament: tournament._id })
-      .populate("homeTeam")
-      .populate("awayTeam");
-
+    // Procesar partidos
     matches.forEach((match) => {
-      if (!match.score) return; // si no tiene resultado, lo ignoramos
+      const home = standingsMap.get(match.homeTeam.toString());
+      const away = standingsMap.get(match.awayTeam.toString());
+
+      if (!home || !away || !match.score) return;
 
       const [homeGoals, awayGoals] = match.score.split("-").map(Number);
 
-      const homeTeam = standingsMap[match.homeTeam.name];
-      const awayTeam = standingsMap[match.awayTeam.name];
+      // Partidos jugados
+      home.played++;
+      away.played++;
 
-      if (!homeTeam || !awayTeam) return;
+      // Goles
+      home.goalsFor += homeGoals;
+      home.goalsAgainst += awayGoals;
+      away.goalsFor += awayGoals;
+      away.goalsAgainst += homeGoals;
 
-      // PJ
-      homeTeam.played++;
-      awayTeam.played++;
+      home.goalDiff = home.goalsFor - home.goalsAgainst;
+      away.goalDiff = away.goalsFor - away.goalsAgainst;
 
-      // Goles a favor y en contra
-      homeTeam.goalsFor += homeGoals;
-      homeTeam.goalsAgainst += awayGoals;
-      awayTeam.goalsFor += awayGoals;
-      awayTeam.goalsAgainst += homeGoals;
-
-      // Recalcular diferencia de gol
-      homeTeam.goalDiff = homeTeam.goalsFor - homeTeam.goalsAgainst;
-      awayTeam.goalDiff = awayTeam.goalsFor - awayTeam.goalsAgainst;
-
-      // Resultados
+      // Resultado
       if (homeGoals > awayGoals) {
-        homeTeam.wins++;
-        homeTeam.points += 3;
-        awayTeam.losses++;
-      } else if (awayGoals > homeGoals) {
-        awayTeam.wins++;
-        awayTeam.points += 3;
-        homeTeam.losses++;
+        home.wins++;
+        home.points += 3;
+        away.losses++;
+      } else if (homeGoals < awayGoals) {
+        away.wins++;
+        away.points += 3;
+        home.losses++;
       } else {
-        // Empate
-        homeTeam.draws++;
-        awayTeam.draws++;
-        homeTeam.points++;
-        awayTeam.points++;
+        home.draws++;
+        away.draws++;
+        home.points++;
+        away.points++;
       }
     });
 
-    // Ordenar tabla por puntos y diferencia de gol
-    const sorted = standings
-      .filter((s) => s.played > 0)
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-        return b.goalsFor - a.goalsFor; // tercer criterio: goles a favor
-      });
+    // Ordenar por puntos, diferencia de gol y GF
+    const sorted = Array.from(standingsMap.values()).sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+      return b.goalsFor - a.goalsFor;
+    });
 
     res.json(sorted);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error al calcular standings", error });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
 export default router;
+

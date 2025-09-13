@@ -1,162 +1,186 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import Card from "../components/Card.jsx";
+import Card from "../components/Card";
 
-const PlayerPage = () => {
-  const [players, setPlayers] = useState([]);
+const TeamPage = () => {
   const [teams, setTeams] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
-    position: "",
-    team: "",
-    photo: ""
+    logo: "",
+    tournamentId: "",
   });
-  const [editId, setEditId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    fetchPlayers();
     fetchTeams();
+    fetchTournaments();
   }, []);
-
-  const fetchPlayers = async () => {
-    const res = await axios.get("http://localhost:5000/api/players");
-    setPlayers(res.data);
-  };
 
   const fetchTeams = async () => {
     const res = await axios.get("http://localhost:5000/api/teams");
     setTeams(res.data);
   };
 
-  const handleChange = (e) =>
+  const fetchTournaments = async () => {
+    const res = await axios.get("http://localhost:5000/api/tournaments");
+    setTournaments(res.data);
+  };
+
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editId) {
-      await axios.put(`http://localhost:5000/api/players/${editId}`, formData);
-    } else {
-      await axios.post("http://localhost:5000/api/players", formData);
-    }
-    setFormData({ name: "", position: "", team: "", photo: "" });
-    setEditId(null);
-    fetchPlayers();
-  };
 
-  const handleEdit = (player) => {
-    setFormData({
-      name: player.name,
-      position: player.position,
-      team: player.team?._id || "",
-      photo: player.photo || ""
-    });
-    setEditId(player._id);
+    if (editingId) {
+      await axios.put(`http://localhost:5000/api/teams/${editingId}`, formData);
+      setEditingId(null);
+    } else {
+      await axios.post("http://localhost:5000/api/teams", formData);
+    }
+
+    setFormData({ name: "", logo: "", tournamentId: "" });
+    fetchTeams();
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/players/${id}`);
-    fetchPlayers();
+    await axios.delete(`http://localhost:5000/api/teams/${id}`);
+    fetchTeams();
   };
+
+  const handleEdit = (team) => {
+    setEditingId(team._id);
+    setFormData({
+      name: team.name,
+      logo: team.logo,
+      tournamentId: team.tournamentId?._id || "",
+    });
+  };
+
+  // Agrupar equipos por torneo
+  const groupedByTournament = tournaments.map((t) => ({
+    tournament: t,
+    teams: teams.filter(
+      (team) =>
+        team.tournamentId?._id === t._id || team.tournament?._id === t._id
+    ),
+  }));
 
   return (
     <div className="p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-6 text-black">Jugadores</h1>
+      <h1 className="text-2xl font-bold mb-6 text-black">Gestión de Equipos</h1>
 
       {/* Formulario */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-gray-100 p-6 rounded-lg shadow-md w-full max-w-md mb-6"
-      >
-        <input
-          type="text"
-          name="name"
-          placeholder="Nombre del jugador"
-          value={formData.name}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-          required
-        />
+      <Card>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Nombre del equipo"
+            className="w-full p-2 border rounded text-black"
+            required
+          />
 
-        <input
-          type="text"
-          name="position"
-          placeholder="Posición"
-          value={formData.position}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-          required
-        />
+          <input
+            type="text"
+            name="logo"
+            value={formData.logo}
+            onChange={handleChange}
+            placeholder="URL del escudo"
+            className="w-full p-2 border rounded text-black"
+          />
 
-        <select
-          name="team"
-          value={formData.team}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-          required
-        >
-          <option value="">Seleccionar equipo</option>
-          {teams.map((t) => (
-            <option key={t._id} value={t._id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+          <select
+            name="tournamentId"
+            value={formData.tournamentId}
+            onChange={handleChange}
+            className="w-full p-2 border rounded text-black"
+            required
+          >
+            <option value="">Seleccionar torneo</option>
+            {tournaments.map((t) => (
+              <option key={t._id} value={t._id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
 
-        <input
-          type="text"
-          name="photo"
-          placeholder="URL de la foto"
-          value={formData.photo}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-        />
+          <button
+            type="submit"
+            className={`px-4 py-2 rounded text-white ${
+              editingId
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {editingId ? "Actualizar Equipo" : "Agregar Equipo"}
+          </button>
+        </form>
+      </Card>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          {editId ? "Actualizar" : "Agregar"}
-        </button>
-      </form>
-
-      {/* Listado */}
-      <div className="flex flex-wrap justify-center gap-6 w-full max-w-4xl">
-        {players.map((player) => (
-          <Card key={player._id}>
-            {player.photo && (
-              <img
-                src={player.photo}
-                alt={player.name}
-                className="w-24 h-24 object-cover rounded-full mx-auto mb-3"
-              />
-            )}
-            <h2 className="text-lg font-bold text-center">{player.name}</h2>
-            <p className="text-center">Posición: {player.position}</p>
-            <p className="text-center">
-              Equipo: {player.team?.name || "Sin equipo"}
-            </p>
-            <div className="flex gap-3 mt-3 justify-center">
-              <button
-                onClick={() => handleEdit(player)}
-                className="bg-yellow-500 text-white px-3 py-1 rounded"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => handleDelete(player._id)}
-                className="bg-red-500 text-white px-3 py-1 rounded"
-              >
-                Eliminar
-              </button>
-            </div>
-          </Card>
-        ))}
+      {/* Listado agrupado por torneo */}
+      <div className="grid gap-6 mt-6 w-full max-w-5xl">
+        {groupedByTournament.map(
+          ({ tournament, teams }) =>
+            teams.length > 0 && (
+              <Card key={tournament._id}>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-black justify-center">
+                  {tournament.logo && (
+                    <img
+                      src={tournament.logo}
+                      alt={tournament.name}
+                      className="w-8 h-8 object-cover"
+                    />
+                  )}
+                  {tournament.name}
+                </h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {teams.map((team) => (
+                    <div
+                      key={team._id}
+                      className="flex items-center justify-between bg-gray-100 p-4 rounded-lg shadow"
+                    >
+                      <div className="flex items-center gap-4">
+                        {team.logo && (
+                          <img
+                            src={team.logo}
+                            alt={team.name}
+                            className="w-10 h-10 object-cover"
+                          />
+                        )}
+                        <p className="font-bold text-black">{team.name}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(team)}
+                          className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(team._id)}
+                          className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )
+        )}
       </div>
     </div>
   );
 };
 
-export default PlayerPage;
+export default TeamPage;
+
 
 
 

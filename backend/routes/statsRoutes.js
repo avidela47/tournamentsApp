@@ -1,66 +1,102 @@
 import express from "express";
-import Stats from "../models/Stats.js";
+import Stat from "../models/Stat.js";
 import Player from "../models/Player.js";
-import Tournament from "../models/Tournament.js";
 
 const router = express.Router();
 
-// GET goleadores de un torneo
-router.get("/topscorers/:tournamentId", async (req, res) => {
+// 👉 Cargar estadísticas de un jugador
+router.post("/:tournamentId", async (req, res) => {
   try {
-    const stats = await Stats.find({ tournament: req.params.tournamentId })
-      .populate("player")
-      .sort({ goals: -1 });
-    res.json(stats);
-  } catch (err) {
-    res.status(500).json({ message: "Error al obtener goleadores", err });
-  }
-});
+    const { playerId, goals, yellowCards, redCards, round } = req.body;
 
-// POST agregar evento (gol o tarjeta)
-router.post("/", async (req, res) => {
-  try {
-    const { playerId, tournamentId, type } = req.body;
-
-    let stat = await Stats.findOne({ player: playerId, tournament: tournamentId });
-    if (!stat) {
-      stat = new Stats({ player: playerId, tournament: tournamentId });
+    // Si ya existe registro, actualiza
+    let stat = await Stat.findOne({ tournamentId: req.params.tournamentId, playerId });
+    if (stat) {
+      stat.goals += Number(goals) || 0;
+      stat.yellowCards += Number(yellowCards) || 0;
+      stat.redCards += Number(redCards) || 0;
+      if (round) stat.round = round;
+      await stat.save();
+    } else {
+      stat = new Stat({
+        tournamentId: req.params.tournamentId,
+        playerId,
+        goals,
+        yellowCards,
+        redCards,
+        round,
+      });
+      await stat.save();
     }
 
-    if (type === "goal") stat.goals++;
-    if (type === "yellow") stat.yellowCards++;
-    if (type === "red") stat.redCards++;
-
-    await stat.save();
     res.json(stat);
   } catch (err) {
-    res.status(500).json({ message: "Error al registrar evento", err });
+    res.status(500).json({ message: err.message });
   }
 });
 
-// GET ranking de tarjetas amarillas de un torneo
-router.get("/topcards/yellow/:tournamentId", async (req, res) => {
+// 👉 Obtener estadísticas de un torneo
+router.get("/:tournamentId", async (req, res) => {
   try {
-    const stats = await Stats.find({ tournament: req.params.tournamentId })
-      .populate("player")
-      .sort({ yellowCards: -1 });
-    res.json(stats);
+    const stats = await Stat.find({ tournamentId: req.params.tournamentId }).populate("playerId");
+
+    if (!stats.length) return res.json({ topScorer: null, yellowCards: [], redCards: [], byRound: [] });
+
+    // Goleador
+    const topScorer = stats.reduce((max, s) =>
+      !max || s.goals > max.goals ? s : max, null
+    );
+
+    // Amarillas ordenadas
+    const yellowCards = stats
+      .filter((s) => s.yellowCards > 0)
+      .map((s) => ({
+        playerId: s.playerId._id,
+        name: s.playerId.name,
+        photo: s.playerId.photo,
+        yellowCards: s.yellowCards,
+      }))
+      .sort((a, b) => b.yellowCards - a.yellowCards);
+
+    // Rojas ordenadas
+    const redCards = stats
+      .filter((s) => s.redCards > 0)
+      .map((s) => ({
+        playerId: s.playerId._id,
+        name: s.playerId.name,
+        photo: s.playerId.photo,
+        redCards: s.redCards,
+      }))
+      .sort((a, b) => b.redCards - a.redCards);
+
+    // Agrupado por fecha (round)
+    const byRound = [];
+    stats.forEach((s) => {
+      if (!s.round) return;
+      let roundStats = byRound.find((r) => r.round === s.round);
+      if (!roundStats) {
+        roundStats = { round: s.round, topScorer: null, yellowCards: 0, redCards: 0 };
+        byRound.push(roundStats);
+      }
+      // goles
+      if (!roundStats.topScorer || s.goals > roundStats.topScorer.goals) {
+        roundStats.topScorer = { name: s.playerId.name, goals: s.goals };
+      }
+      roundStats.yellowCards += s.yellowCards;
+      roundStats.redCards += s.redCards;
+    });
+
+    res.json({
+      topScorer: topScorer
+        ? { name: topScorer.playerId.name, photo: topScorer.playerId.photo, goals: topScorer.goals }
+        : null,
+      yellowCards,
+      redCards,
+      byRound,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Error al obtener amarillas", err });
+    res.status(500).json({ message: err.message });
   }
 });
-
-// GET ranking de tarjetas rojas de un torneo
-router.get("/topcards/red/:tournamentId", async (req, res) => {
-  try {
-    const stats = await Stats.find({ tournament: req.params.tournamentId })
-      .populate("player")
-      .sort({ redCards: -1 });
-    res.json(stats);
-  } catch (err) {
-    res.status(500).json({ message: "Error al obtener rojas", err });
-  }
-});
-
 
 export default router;

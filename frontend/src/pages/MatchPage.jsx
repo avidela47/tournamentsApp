@@ -6,15 +6,14 @@ const MatchPage = () => {
   const [matches, setMatches] = useState([]);
   const [tournaments, setTournaments] = useState([]);
   const [teams, setTeams] = useState([]);
-  const [selectedTournament, setSelectedTournament] = useState("");
   const [formData, setFormData] = useState({
     tournamentId: "",
+    round: "", // número de fecha
     homeTeam: "",
     awayTeam: "",
     homeGoals: "",
     awayGoals: "",
     referee: "",
-    round: "", // fecha
   });
   const [editingId, setEditingId] = useState(null);
 
@@ -29,11 +28,19 @@ const MatchPage = () => {
   };
 
   const fetchTeams = async (tournamentId) => {
-    if (!tournamentId) return;
-    const res = await axios.get(
-      `http://localhost:5000/api/teams/tournament/${tournamentId}`
-    );
-    setTeams(res.data);
+    if (!tournamentId) {
+      setTeams([]);
+      return;
+    }
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/teams/tournament/${tournamentId}`
+      );
+      setTeams(res.data);
+    } catch (err) {
+      console.error("Error cargando equipos:", err);
+      setTeams([]);
+    }
   };
 
   const fetchMatches = async () => {
@@ -41,16 +48,14 @@ const MatchPage = () => {
     setMatches(res.data);
   };
 
-  const handleTournamentChange = (e) => {
-    const tid = e.target.value;
-    setSelectedTournament(tid);
-    setTeams([]);
-    setFormData({ ...formData, tournamentId: tid, homeTeam: "", awayTeam: "" });
-    if (tid) fetchTeams(tid);
+  const handleChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleTournamentChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, tournamentId: value, homeTeam: "", awayTeam: "" }));
+    fetchTeams(value);
   };
 
   const handleSubmit = async (e) => {
@@ -65,14 +70,13 @@ const MatchPage = () => {
 
     setFormData({
       tournamentId: "",
+      round: "",
       homeTeam: "",
       awayTeam: "",
       homeGoals: "",
       awayGoals: "",
       referee: "",
-      round: "",
     });
-    setSelectedTournament("");
     await fetchMatches();
   };
 
@@ -85,42 +89,35 @@ const MatchPage = () => {
     setEditingId(match._id);
     setFormData({
       tournamentId: match.tournamentId?._id || "",
+      round: match.round || "",
       homeTeam: match.homeTeam?._id || "",
       awayTeam: match.awayTeam?._id || "",
-      homeGoals: match.homeGoals,
-      awayGoals: match.awayGoals,
-      referee: match.referee,
-      round: match.round,
+      homeGoals: match.homeGoals || "",
+      awayGoals: match.awayGoals || "",
+      referee: match.referee || "",
     });
 
-    const tid = match.tournamentId?._id;
-    if (tid) {
-      setSelectedTournament(tid);
-      fetchTeams(tid);
+    if (match.tournamentId?._id) {
+      fetchTeams(match.tournamentId._id);
     }
   };
 
-  // Agrupar por torneo → fecha
-  const groupedByTournament = tournaments.map((t) => ({
-    tournament: t,
-    rounds: [
-      ...new Set(
-        matches
-          .filter(
-            (m) =>
-              m.tournamentId?._id === t._id || m.tournament?._id === t._id
-          )
-          .map((m) => m.round)
-      ),
-    ].map((round) => ({
-      round,
-      matches: matches.filter(
-        (m) =>
-          (m.tournamentId?._id === t._id || m.tournament?._id === t._id) &&
-          m.round === round
-      ),
-    })),
-  }));
+  // Agrupación por torneo → fechas
+  const groupedByTournament = tournaments.map((t) => {
+    const tournamentMatches = matches.filter(
+      (m) => String(m.tournamentId?._id) === String(t._id)
+    );
+
+    // Agrupar por número de fecha (round)
+    const groupedByRound = tournamentMatches.reduce((acc, match) => {
+      const round = match.round || "Sin fecha";
+      if (!acc[round]) acc[round] = [];
+      acc[round].push(match);
+      return acc;
+    }, {});
+
+    return { tournament: t, rounds: groupedByRound };
+  });
 
   return (
     <div className="p-6 flex flex-col items-center">
@@ -128,9 +125,11 @@ const MatchPage = () => {
 
       {/* Formulario */}
       <Card>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-xl">
+          {/* Torneo */}
           <select
-            value={selectedTournament}
+            name="tournamentId"
+            value={formData.tournamentId}
             onChange={handleTournamentChange}
             className="w-full p-2 border rounded text-black"
             required
@@ -143,6 +142,18 @@ const MatchPage = () => {
             ))}
           </select>
 
+          {/* Número de fecha */}
+          <input
+            type="number"
+            name="round"
+            value={formData.round}
+            onChange={handleChange}
+            placeholder="Número de fecha (1, 2, 3...)"
+            className="w-full p-2 border rounded text-black"
+            required
+          />
+
+          {/* Equipo local */}
           <select
             name="homeTeam"
             value={formData.homeTeam}
@@ -158,6 +169,7 @@ const MatchPage = () => {
             ))}
           </select>
 
+          {/* Equipo visitante */}
           <select
             name="awayTeam"
             value={formData.awayTeam}
@@ -173,6 +185,7 @@ const MatchPage = () => {
             ))}
           </select>
 
+          {/* Goles */}
           <div className="flex gap-2">
             <input
               type="number"
@@ -180,8 +193,7 @@ const MatchPage = () => {
               value={formData.homeGoals}
               onChange={handleChange}
               placeholder="Goles local"
-              className="w-1/2 p-2 border rounded text-black"
-              required
+              className="w-full p-2 border rounded text-black"
             />
             <input
               type="number"
@@ -189,28 +201,18 @@ const MatchPage = () => {
               value={formData.awayGoals}
               onChange={handleChange}
               placeholder="Goles visitante"
-              className="w-1/2 p-2 border rounded text-black"
-              required
+              className="w-full p-2 border rounded text-black"
             />
           </div>
 
+          {/* Árbitro */}
           <input
             type="text"
             name="referee"
             value={formData.referee}
             onChange={handleChange}
-            placeholder="Nombre del árbitro"
+            placeholder="Árbitro"
             className="w-full p-2 border rounded text-black"
-          />
-
-          <input
-            type="text"
-            name="round"
-            value={formData.round}
-            onChange={handleChange}
-            placeholder="Ej: Primera, Segunda, etc."
-            className="w-full p-2 border rounded text-black"
-            required
           />
 
           <button
@@ -224,85 +226,91 @@ const MatchPage = () => {
         </form>
       </Card>
 
-      {/* Listado agrupado por torneo → fecha */}
+      {/* Listado agrupado */}
       <div className="grid gap-6 mt-6 w-full max-w-5xl">
-        {groupedByTournament.map(
-          ({ tournament, rounds }) =>
-            rounds.length > 0 && (
-              <Card key={tournament._id}>
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-black justify-center">
-                  {tournament.logo && (
-                    <img
-                      src={tournament.logo}
-                      alt={tournament.name}
-                      className="w-8 h-8 object-cover"
-                    />
-                  )}
-                  {tournament.name}
-                </h2>
-                <div className="grid gap-6">
-                  {rounds.map(
-                    ({ round, matches }) =>
-                      matches.length > 0 && (
-                        <div key={round} className="bg-gray-100 p-4 rounded-lg shadow">
-                          <h3 className="text-lg font-bold mb-2 text-black">{round}</h3>
-                          <div className="grid gap-2">
-                            {matches.map((m) => (
-                              <div
-                                key={m._id}
-                                className="flex items-center justify-between bg-white p-2 rounded shadow-sm"
-                              >
-                                <div className="flex items-center gap-2">
-                                  {m.homeTeam?.logo && (
-                                    <img
-                                      src={m.homeTeam.logo}
-                                      alt={m.homeTeam.name}
-                                      className="w-6 h-6 object-cover"
-                                    />
-                                  )}
-                                  <span className="font-bold text-black">{m.homeTeam?.name}</span>
-                                  <span className="text-black">
-                                    {m.homeGoals} - {m.awayGoals}
-                                  </span>
-                                  <span className="font-bold text-black">{m.awayTeam?.name}</span>
-                                  {m.awayTeam?.logo && (
-                                    <img
-                                      src={m.awayTeam.logo}
-                                      alt={m.awayTeam.name}
-                                      className="w-6 h-6 object-cover"
-                                    />
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <span className="italic text-sm text-gray-700">
-                                    Árbitro: {m.referee || "N/A"}
-                                  </span>
-                                  <button
-                                    onClick={() => handleEdit(m)}
-                                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(m._id)}
-                                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                                  >
-                                    Eliminar
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+        {groupedByTournament.map(({ tournament, rounds }) => (
+          <Card key={tournament._id}>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              {tournament.logo && (
+                <img
+                  src={tournament.logo}
+                  alt={tournament.name}
+                  className="w-8 h-8 object-cover"
+                />
+              )}
+              <h2 className="text-xl font-bold text-black">{tournament.name}</h2>
+            </div>
+
+            {Object.keys(rounds).length === 0 ? (
+              <p className="text-center text-gray-600">
+                No hay partidos para este torneo.
+              </p>
+            ) : (
+              Object.entries(rounds).map(([round, matches]) => (
+                <div key={round} className="mb-4">
+                  <h3 className="text-lg font-semibold text-black mb-2">
+                    Fecha {round}
+                  </h3>
+                  <div className="space-y-4">
+                    {matches.map((match) => (
+                      <div
+                        key={match._id}
+                        className="flex flex-col items-center bg-gray-100 p-3 rounded-lg"
+                      >
+                        <div className="flex items-center gap-4">
+                          {match.homeTeam?.logo && (
+                            <img
+                              src={match.homeTeam.logo}
+                              alt={match.homeTeam.name}
+                              className="w-8 h-8 object-cover"
+                            />
+                          )}
+                          <span className="font-semibold text-black">
+                            {match.homeTeam?.name}
+                          </span>
+                          <span className="text-black">
+                            {match.homeGoals} - {match.awayGoals}
+                          </span>
+                          <span className="font-semibold text-black">
+                            {match.awayTeam?.name}
+                          </span>
+                          {match.awayTeam?.logo && (
+                            <img
+                              src={match.awayTeam.logo}
+                              alt={match.awayTeam.name}
+                              className="w-8 h-8 object-cover"
+                            />
+                          )}
                         </div>
-                      )
-                  )}
+                        <p className="text-gray-700 mt-2">
+                          Árbitro: {match.referee || "Sin asignar"}
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => handleEdit(match)}
+                            className="bg-yellow-500 text-white text-sm px-2 py-1 rounded hover:bg-yellow-600"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(match._id)}
+                            className="bg-red-600 text-white text-sm px-2 py-1 rounded hover:bg-red-700"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </Card>
-            )
-        )}
+              ))
+            )}
+          </Card>
+        ))}
       </div>
     </div>
   );
 };
 
 export default MatchPage;
+

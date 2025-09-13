@@ -4,7 +4,7 @@ import Team from "../models/Team.js";
 const router = express.Router();
 
 // ============================
-// Obtener todos los equipos (populate torneo)
+// Obtener todos los equipos (con torneo)
 // ============================
 router.get("/", async (req, res) => {
   try {
@@ -16,15 +16,12 @@ router.get("/", async (req, res) => {
 });
 
 // ============================
-// Obtener equipos por torneo (soporta tournamentId o tournament)
+// Obtener equipos por torneo
 // ============================
 router.get("/tournament/:tournamentId", async (req, res) => {
   try {
-    const id = req.params.tournamentId;
-
-    // Soporte de datos viejos: algunos equipos podrían tener "tournament" en lugar de "tournamentId".
     const teams = await Team.find({
-      $or: [{ tournamentId: id }, { tournament: id }],
+      tournamentId: req.params.tournamentId,
     }).populate("tournamentId", "name logo");
 
     res.json(teams);
@@ -34,17 +31,13 @@ router.get("/tournament/:tournamentId", async (req, res) => {
 });
 
 // ============================
-// Crear equipo (acepta tournamentId o tournament)
+// Crear equipo
 // ============================
 router.post("/", async (req, res) => {
   try {
-    const { name, logo } = req.body;
-    const tournamentId = req.body.tournamentId || req.body.tournament;
-
+    const { name, logo, tournamentId } = req.body;
     if (!tournamentId) {
-      return res
-        .status(400)
-        .json({ message: "El equipo debe pertenecer a un torneo" });
+      return res.status(400).json({ message: "El equipo debe tener torneo" });
     }
 
     const team = new Team({ name, logo, tournamentId });
@@ -61,9 +54,7 @@ router.post("/", async (req, res) => {
 // ============================
 router.put("/:id", async (req, res) => {
   try {
-    const { name, logo } = req.body;
-    const tournamentId = req.body.tournamentId || req.body.tournament;
-
+    const { name, logo, tournamentId } = req.body;
     const updated = await Team.findByIdAndUpdate(
       req.params.id,
       { name, logo, ...(tournamentId ? { tournamentId } : {}) },
@@ -91,6 +82,5 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
-
 
 

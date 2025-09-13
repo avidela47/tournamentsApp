@@ -1,49 +1,51 @@
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // Importar rutas
+import tournamentRoutes from "./routes/tournamentRoutes.js";
 import teamRoutes from "./routes/teamRoutes.js";
 import playerRoutes from "./routes/playerRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
-import tournamentRoutes from "./routes/tournamentRoutes.js";
-import standingsRoutes from "./routes/standingsRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 
 dotenv.config();
-
 const app = express();
+
+// ============================
+// Middlewares
+// ============================
 app.use(cors());
 app.use(express.json());
 
-// Conexión MongoDB Atlas
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Conectado a MongoDB Atlas"))
-  .catch((err) => console.error("❌ Error en MongoDB:", err));
+// ============================
+// Conexión a MongoDB
+// ============================
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
+const MONGO_DB = process.env.MONGO_DB || "tournaments2";
 
-// Rutas API
+mongoose
+  .connect(MONGO_URI, { dbName: MONGO_DB })
+  .then(() => console.log("✅ Conectado a MongoDB"))
+  .catch((err) => console.error("❌ Error de conexión MongoDB:", err));
+
+// ============================
+// Rutas
+// ============================
+app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/matches", matchRoutes);
-app.use("/api/tournaments", tournamentRoutes);
-app.use("/api/standings", standingsRoutes);
 app.use("/api/stats", statsRoutes);
 
-// Servir frontend (build de Vite)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Ruta de prueba
+app.get("/", (_req, res) => res.send("API funcionando correctamente 🚀"));
 
-app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
-});
-
-// Puerto
+// ============================
+// Levantar servidor
+// ============================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
-
+app.listen(PORT, () =>
+  console.log(`🔥 Servidor corriendo en Puerto:${PORT}`)
+);

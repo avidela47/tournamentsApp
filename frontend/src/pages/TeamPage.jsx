@@ -13,18 +13,18 @@ const TeamPage = () => {
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    fetchTournaments();
     fetchTeams();
+    fetchTournaments();
   }, []);
-
-  const fetchTournaments = async () => {
-    const res = await axios.get("http://localhost:5000/api/tournaments");
-    setTournaments(res.data);
-  };
 
   const fetchTeams = async () => {
     const res = await axios.get("http://localhost:5000/api/teams");
     setTeams(res.data);
+  };
+
+  const fetchTournaments = async () => {
+    const res = await axios.get("http://localhost:5000/api/tournaments");
+    setTournaments(res.data);
   };
 
   const handleChange = (e) => {
@@ -59,18 +59,13 @@ const TeamPage = () => {
     });
   };
 
-  const groupedByTournament = tournaments.map((t) => {
-    const list = teams.filter((team) => {
-      const tid =
-        team?.tournamentId?._id ||
-        team?.tournament?._id ||
-        team?.tournamentId ||
-        team?.tournament;
-      return String(tid) === String(t._id);
-    });
-
-    return { tournament: t, teams: list };
-  });
+  // Agrupación por torneo
+  const groupedByTournament = tournaments.map((t) => ({
+    tournament: t,
+    teams: teams.filter(
+      (team) => String(team.tournamentId?._id) === String(t._id)
+    ),
+  }));
 
   return (
     <div className="p-6 flex flex-col items-center">
@@ -94,10 +89,11 @@ const TeamPage = () => {
             name="logo"
             value={formData.logo}
             onChange={handleChange}
-            placeholder="URL del escudo (opcional)"
+            placeholder="URL del escudo"
             className="w-full p-2 border rounded text-black"
           />
 
+          {/* Dropdown torneos */}
           <select
             name="tournamentId"
             value={formData.tournamentId}
@@ -140,7 +136,9 @@ const TeamPage = () => {
             </div>
 
             {teams.length === 0 ? (
-              <p className="text-center text-gray-600">No hay equipos para este torneo.</p>
+              <p className="text-center text-gray-600">
+                No hay equipos en este torneo.
+              </p>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {teams.map((team) => (
@@ -182,6 +180,7 @@ const TeamPage = () => {
 };
 
 export default TeamPage;
+
 
 
 

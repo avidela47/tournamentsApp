@@ -6,6 +6,7 @@ const matchSchema = new mongoose.Schema({
     ref: "Tournament",
     required: true,
   },
+  round: { type: Number, required: true }, // número de fecha
   homeTeam: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Team",
@@ -16,25 +17,14 @@ const matchSchema = new mongoose.Schema({
     ref: "Team",
     required: true,
   },
-  homeGoals: {
-    type: Number,
-    default: 0,
-  },
-  awayGoals: {
-    type: Number,
-    default: 0,
-  },
-  referee: {
-    type: String,
-    default: "",
-  },
-  round: {
-    type: String, // Ej: "Primera", "Segunda", "Final"
-    required: true,
-  },
+  homeGoals: { type: Number, default: 0 },
+  awayGoals: { type: Number, default: 0 },
+  referee: { type: String },
+  date: { type: Date, default: Date.now },
 });
 
 export default mongoose.model("Match", matchSchema);
+
 
 
 

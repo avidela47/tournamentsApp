@@ -5,15 +5,19 @@ import Tournament from "../models/Tournament.js";
 
 const router = express.Router();
 
+// helper para populate consistente
+const matchPopulate = [
+  { path: "tournamentId", select: "name logo" },
+  { path: "homeTeam", select: "name logo" },
+  { path: "awayTeam", select: "name logo" },
+];
+
 // ============================
-// Obtener todos los partidos
+// Obtener todos los partidos (con torneo y equipos)
 // ============================
 router.get("/", async (req, res) => {
   try {
-    const matches = await Match.find()
-      .populate("homeTeam", "name logo")
-      .populate("awayTeam", "name logo")
-      .populate("tournamentId", "name logo");
+    const matches = await Match.find().populate(matchPopulate).sort({ round: 1, date: 1 });
     res.json(matches);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -21,37 +25,38 @@ router.get("/", async (req, res) => {
 });
 
 // ============================
-// Crear un nuevo partido
+// Crear partido
 // ============================
 router.post("/", async (req, res) => {
   try {
-    const { tournamentId, homeTeam, awayTeam, homeGoals, awayGoals, referee, round } = req.body;
+    const { tournamentId, round, homeTeam, awayTeam, homeGoals, awayGoals, referee, date } =
+      req.body;
 
-    // Validar torneo
+    // validaciones básicas
+    if (!tournamentId || !round || !homeTeam || !awayTeam) {
+      return res.status(400).json({ message: "Faltan datos obligatorios" });
+    }
+
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) return res.status(400).json({ message: "Torneo no encontrado" });
 
-    // Validar equipos
-    const local = await Team.findById(homeTeam);
-    const visitante = await Team.findById(awayTeam);
-    if (!local || !visitante)
-      return res.status(400).json({ message: "Alguno de los equipos no existe" });
+    const home = await Team.findById(homeTeam);
+    const away = await Team.findById(awayTeam);
+    if (!home || !away) return res.status(400).json({ message: "Equipo no encontrado" });
 
-    const newMatch = new Match({
+    const match = new Match({
       tournamentId,
+      round,
       homeTeam,
       awayTeam,
       homeGoals,
       awayGoals,
       referee,
-      round,
+      date,
     });
 
-    const savedMatch = await newMatch.save();
-    const populated = await savedMatch
-      .populate("homeTeam", "name logo")
-      .populate("awayTeam", "name logo")
-      .populate("tournamentId", "name logo");
+    const saved = await match.save();
+    const populated = await saved.populate(matchPopulate);
     res.status(201).json(populated);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -59,31 +64,29 @@ router.post("/", async (req, res) => {
 });
 
 // ============================
-// Actualizar un partido
+// Actualizar partido
 // ============================
 router.put("/:id", async (req, res) => {
   try {
-    const { tournamentId, homeTeam, awayTeam, homeGoals, awayGoals, referee, round } = req.body;
+    const { tournamentId, round, homeTeam, awayTeam, homeGoals, awayGoals, referee, date } =
+      req.body;
 
-    const updatedMatch = await Match.findByIdAndUpdate(
+    const updated = await Match.findByIdAndUpdate(
       req.params.id,
-      { tournamentId, homeTeam, awayTeam, homeGoals, awayGoals, referee, round },
+      { tournamentId, round, homeTeam, awayTeam, homeGoals, awayGoals, referee, date },
       { new: true }
-    )
-      .populate("homeTeam", "name logo")
-      .populate("awayTeam", "name logo")
-      .populate("tournamentId", "name logo");
+    ).populate(matchPopulate);
 
-    if (!updatedMatch) return res.status(404).json({ message: "Partido no encontrado" });
+    if (!updated) return res.status(404).json({ message: "Partido no encontrado" });
 
-    res.json(updatedMatch);
+    res.json(updated);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
 
 // ============================
-// Eliminar un partido
+// Eliminar partido
 // ============================
 router.delete("/:id", async (req, res) => {
   try {
@@ -96,15 +99,13 @@ router.delete("/:id", async (req, res) => {
 });
 
 // ============================
-// Obtener partidos de un torneo específico
+// Obtener partidos por torneo
 // ============================
 router.get("/tournament/:tournamentId", async (req, res) => {
   try {
     const matches = await Match.find({ tournamentId: req.params.tournamentId })
-      .populate("homeTeam", "name logo")
-      .populate("awayTeam", "name logo")
-      .populate("tournamentId", "name logo");
-
+      .populate(matchPopulate)
+      .sort({ round: 1, date: 1 });
     res.json(matches);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -112,3 +113,4 @@ router.get("/tournament/:tournamentId", async (req, res) => {
 });
 
 export default router;
+

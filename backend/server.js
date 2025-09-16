@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Importar rutas
 import tournamentRoutes from "./routes/tournamentRoutes.js";
@@ -31,7 +33,7 @@ mongoose
   .catch((err) => console.error("❌ Error de conexión MongoDB:", err));
 
 // ============================
-// Rutas
+// Rutas API
 // ============================
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/teams", teamRoutes);
@@ -39,8 +41,17 @@ app.use("/api/players", playerRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/standings", standingsRoutes);
 
-// Ruta de prueba
-app.get("/", (_req, res) => res.send("API funcionando correctamente 🚀"));
+// ============================
+// Servir frontend en producción
+// ============================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 
 // ============================
 // Levantar servidor

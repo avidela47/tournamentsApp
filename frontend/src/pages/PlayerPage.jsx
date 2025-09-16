@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 const PlayerPage = () => {
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -24,17 +26,17 @@ const PlayerPage = () => {
   };
 
   const loadPlayers = async () => {
-    const data = await fetchJSON("http://localhost:5000/api/players");
+    const data = await fetchJSON(`${API_URL}/players`);
     setPlayers(data || []);
   };
 
   const loadTeams = async () => {
-    const data = await fetchJSON("http://localhost:5000/api/teams");
+    const data = await fetchJSON(`${API_URL}/teams`);
     setTeams(data || []);
   };
 
   const loadTournaments = async () => {
-    const data = await fetchJSON("http://localhost:5000/api/tournaments");
+    const data = await fetchJSON(`${API_URL}/tournaments`);
     setTournaments(data || []);
   };
 
@@ -47,13 +49,13 @@ const PlayerPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editingId) {
-      await fetchJSON(`http://localhost:5000/api/players/${editingId}`, {
+      await fetchJSON(`${API_URL}/players/${editingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     } else {
-      await fetchJSON("http://localhost:5000/api/players", {
+      await fetchJSON(`${API_URL}/players`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -88,7 +90,7 @@ const PlayerPage = () => {
   };
 
   const handleDelete = async (id) => {
-    await fetchJSON(`http://localhost:5000/api/players/${id}`, {
+    await fetchJSON(`${API_URL}/players/${id}`, {
       method: "DELETE",
     });
     await loadPlayers();
@@ -97,7 +99,7 @@ const PlayerPage = () => {
   const handleUpdateStats = async (id) => {
     const stats = updatingStats[id];
     if (!stats) return;
-    await fetchJSON(`http://localhost:5000/api/players/${id}/stats`, {
+    await fetchJSON(`${API_URL}/players/${id}/stats`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(stats),
@@ -331,5 +333,3 @@ const PlayerPage = () => {
 };
 
 export default PlayerPage;
-
-

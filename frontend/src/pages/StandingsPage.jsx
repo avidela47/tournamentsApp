@@ -6,6 +6,10 @@ const StandingsPage = () => {
   const [players, setPlayers] = useState([]);
   const [selectedTournament, setSelectedTournament] = useState("");
 
+  // 🌍 Detectar API (Render o Local)
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
   const fetchJSON = async (url) => {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
@@ -14,23 +18,19 @@ const StandingsPage = () => {
 
   useEffect(() => {
     const loadTournaments = async () => {
-      const data = await fetchJSON("http://localhost:5000/api/tournaments");
+      const data = await fetchJSON(`${API_URL}/tournaments`);
       setTournaments(data);
     };
     loadTournaments();
   }, []);
 
   const loadStandings = async (tournamentId) => {
-    const data = await fetchJSON(
-      `http://localhost:5000/api/standings/${tournamentId}`
-    );
+    const data = await fetchJSON(`${API_URL}/standings/${tournamentId}`);
     setStandings(data);
   };
 
   const loadPlayers = async (tournamentId) => {
-    const data = await fetchJSON(
-      `http://localhost:5000/api/players/tournament/${tournamentId}`
-    );
+    const data = await fetchJSON(`${API_URL}/players/tournament/${tournamentId}`);
     setPlayers(data);
   };
 
@@ -246,12 +246,3 @@ const StandingsPage = () => {
 };
 
 export default StandingsPage;
-
-
-
-
-
-
-
-
-

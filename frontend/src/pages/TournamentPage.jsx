@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 const TournamentPage = () => {
   const [tournaments, setTournaments] = useState([]);
   const [form, setForm] = useState({
@@ -23,7 +25,7 @@ const TournamentPage = () => {
   // Cargar Torneos
   // ============================
   const loadTournaments = async () => {
-    const data = await fetchJSON("http://localhost:5000/api/tournaments");
+    const data = await fetchJSON(`${API_URL}/tournaments`);
     setTournaments(data || []);
   };
 
@@ -38,13 +40,13 @@ const TournamentPage = () => {
     e.preventDefault();
 
     if (editingId) {
-      await fetchJSON(`http://localhost:5000/api/tournaments/${editingId}`, {
+      await fetchJSON(`${API_URL}/tournaments/${editingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     } else {
-      await fetchJSON("http://localhost:5000/api/tournaments", {
+      await fetchJSON(`${API_URL}/tournaments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -73,7 +75,7 @@ const TournamentPage = () => {
   // Eliminar Torneo
   // ============================
   const handleDelete = async (id) => {
-    await fetchJSON(`http://localhost:5000/api/tournaments/${id}`, {
+    await fetchJSON(`${API_URL}/tournaments/${id}`, {
       method: "DELETE",
     });
     await loadTournaments();
@@ -178,6 +180,7 @@ const TournamentPage = () => {
 };
 
 export default TournamentPage;
+
 
 
 

@@ -8,13 +8,16 @@ const CardsPage = () => {
   const [selectedTournament, setSelectedTournament] = useState("");
   const [cards, setCards] = useState({ yellow: [], red: [] });
 
+  // 🌍 API Render o Local
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
   useEffect(() => {
     fetchTournaments();
   }, []);
 
   const fetchTournaments = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/tournaments");
+      const res = await axios.get(`${API_URL}/tournaments`);
       setTournaments(res.data);
     } catch (err) {
       console.error("Error cargando torneos:", err);
@@ -23,9 +26,7 @@ const CardsPage = () => {
 
   const fetchCards = async (tournamentId) => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/stats/cards/${tournamentId}`
-      );
+      const res = await axios.get(`${API_URL}/stats/cards/${tournamentId}`);
       setCards(res.data);
     } catch (err) {
       console.error("Error cargando tarjetas:", err);

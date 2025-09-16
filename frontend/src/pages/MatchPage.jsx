@@ -16,6 +16,9 @@ const MatchPage = () => {
   });
   const [editingId, setEditingId] = useState(null);
 
+  // 🌍 API para Render o Local
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
   const fetchJSON = async (url, options = {}) => {
     const res = await fetch(url, options);
     if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
@@ -23,17 +26,17 @@ const MatchPage = () => {
   };
 
   const loadMatches = async () => {
-    const data = await fetchJSON("http://localhost:5000/api/matches");
+    const data = await fetchJSON(`${API_URL}/matches`);
     setMatches(data || []);
   };
 
   const loadTeams = async () => {
-    const data = await fetchJSON("http://localhost:5000/api/teams");
+    const data = await fetchJSON(`${API_URL}/teams`);
     setTeams(data || []);
   };
 
   const loadTournaments = async () => {
-    const data = await fetchJSON("http://localhost:5000/api/tournaments");
+    const data = await fetchJSON(`${API_URL}/tournaments`);
     setTournaments(data || []);
   };
 
@@ -46,13 +49,13 @@ const MatchPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editingId) {
-      await fetchJSON(`http://localhost:5000/api/matches/${editingId}`, {
+      await fetchJSON(`${API_URL}/matches/${editingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     } else {
-      await fetchJSON("http://localhost:5000/api/matches", {
+      await fetchJSON(`${API_URL}/matches`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -87,7 +90,7 @@ const MatchPage = () => {
   };
 
   const handleDelete = async (id) => {
-    await fetchJSON(`http://localhost:5000/api/matches/${id}`, {
+    await fetchJSON(`${API_URL}/matches/${id}`, {
       method: "DELETE",
     });
     await loadMatches();
@@ -305,6 +308,7 @@ const MatchPage = () => {
 };
 
 export default MatchPage;
+
 
 
 

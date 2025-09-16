@@ -15,7 +15,7 @@ const PlayerPage = () => {
     tournament: "",
   });
   const [editingId, setEditingId] = useState(null);
-  const [updatingStats, setUpdatingStats] = useState({}); // para stats rápidas
+  const [updatingStats, setUpdatingStats] = useState({});
 
   const fetchJSON = async (url, options = {}) => {
     const res = await fetch(url, options);
@@ -94,7 +94,6 @@ const PlayerPage = () => {
     await loadPlayers();
   };
 
-  // 🔥 actualizar solo estadísticas desde la card
   const handleUpdateStats = async (id) => {
     const stats = updatingStats[id];
     if (!stats) return;
@@ -106,7 +105,6 @@ const PlayerPage = () => {
     await loadPlayers();
   };
 
-  // Agrupación por torneo y equipo
   const groupedByTournament = tournaments.map((tournament) => ({
     ...tournament,
     teams: teams
@@ -200,7 +198,7 @@ const PlayerPage = () => {
             <img
               src={tournament.logo || "/default-logo.png"}
               alt={tournament.name}
-              className="w-24 h-24 rounded-full object-cover border mb-2"
+              className="w-20 h-20 rounded-full object-cover border mb-2"
             />
             <h3 className="text-2xl font-bold">{tournament.name}</h3>
           </div>
@@ -212,13 +210,13 @@ const PlayerPage = () => {
                 <img
                   src={team.logo || "/default-logo.png"}
                   alt={team.name}
-                  className="w-10 h-10 rounded-full border"
+                  className="w-8 h-8 rounded-full border"
                 />
-                <h4 className="text-xl font-bold">{team.name}</h4>
+                <h4 className="text-lg font-bold">{team.name}</h4>
               </div>
 
               {/* Jugadores */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {team.players.length === 0 ? (
                   <p className="text-gray-500 col-span-full text-center">
                     No hay jugadores en este equipo.
@@ -227,25 +225,27 @@ const PlayerPage = () => {
                   team.players.map((player) => (
                     <div
                       key={player._id}
-                      className="bg-white rounded-lg shadow p-4 flex flex-col items-center text-center"
+                      className="bg-white rounded-lg shadow p-3 flex flex-col items-center text-center"
                     >
                       <img
                         src={player.photo || "/default-player.png"}
                         alt={player.name}
-                        className="w-20 h-20 rounded-full object-cover border mb-3"
+                        className="w-14 h-14 rounded-full object-cover border mb-2"
                       />
-                      <h4 className="text-lg font-bold">{player.name}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="text-base font-bold">{player.name}</h4>
+                      <p className="text-xs text-gray-600">
                         {player.position}
                       </p>
-                      <p className="text-sm mt-1">Equipo: {player.team?.name}</p>
-                      <p className="text-sm">
+                      <p className="text-xs mt-1">
+                        Equipo: {player.team?.name}
+                      </p>
+                      <p className="text-xs">
                         Torneo: {player.team?.tournament?.name}
                       </p>
 
                       {/* Stats rápidas */}
-                      <div className="mt-3 w-full">
-                        <div className="flex justify-between text-sm mb-2">
+                      <div className="mt-2 w-full">
+                        <div className="flex justify-between text-xs mb-1">
                           <label>⚽</label>
                           <input
                             type="number"
@@ -259,10 +259,10 @@ const PlayerPage = () => {
                                 },
                               }))
                             }
-                            className="w-16 border rounded p-1 text-black"
+                            className="w-12 border rounded p-1 text-black text-xs"
                           />
                         </div>
-                        <div className="flex justify-between text-sm mb-2">
+                        <div className="flex justify-between text-xs mb-1">
                           <label className="text-yellow-600">🟨</label>
                           <input
                             type="number"
@@ -276,10 +276,10 @@ const PlayerPage = () => {
                                 },
                               }))
                             }
-                            className="w-16 border rounded p-1 text-black"
+                            className="w-12 border rounded p-1 text-black text-xs"
                           />
                         </div>
-                        <div className="flex justify-between text-sm mb-2">
+                        <div className="flex justify-between text-xs mb-1">
                           <label className="text-red-600">🟥</label>
                           <input
                             type="number"
@@ -293,27 +293,27 @@ const PlayerPage = () => {
                                 },
                               }))
                             }
-                            className="w-16 border rounded p-1 text-black"
+                            className="w-12 border rounded p-1 text-black text-xs"
                           />
                         </div>
                         <button
                           onClick={() => handleUpdateStats(player._id)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm w-full"
+                          className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs w-full"
                         >
                           Guardar Stats
                         </button>
                       </div>
 
-                      <div className="flex gap-2 mt-3">
+                      <div className="flex gap-1 mt-2">
                         <button
                           onClick={() => handleEdit(player)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1 rounded text-sm"
+                          className="bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1 rounded text-xs"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => handleDelete(player._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
                         >
                           Eliminar
                         </button>
@@ -331,4 +331,5 @@ const PlayerPage = () => {
 };
 
 export default PlayerPage;
+
 

@@ -8,7 +8,7 @@ const HomePage = () => {
     { path: "/matches", label: "Partidos", icon: "🥅", color: "bg-blue-100" },
     { path: "/tournaments", label: "Torneos", icon: "🏆", color: "bg-purple-100" },
     { path: "/standings", label: "Posiciones", icon: "📊", color: "bg-orange-100" },
-    { path: "/stats", label: "Estadísticas", icon: "📈", color: "bg-pink-100" },
+    { path: "/", label: "Estadísticas", icon: "📈", color: "bg-pink-100" },
   ];
 
   return (

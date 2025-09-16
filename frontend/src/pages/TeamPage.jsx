@@ -1,189 +1,180 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import Card from "../components/Card";
+import React, { useState, useEffect } from "react";
 
 const TeamPage = () => {
   const [teams, setTeams] = useState([]);
   const [tournaments, setTournaments] = useState([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    logo: "",
-    tournamentId: "",
-  });
+  const [form, setForm] = useState({ name: "", logo: "", tournament: "" });
   const [editingId, setEditingId] = useState(null);
 
+  const fetchJSON = async (url, options = {}) => {
+    const res = await fetch(url, options);
+    if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
+    return res.json();
+  };
+
+  const loadTeams = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/teams");
+    setTeams(data || []);
+  };
+
+  const loadTournaments = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/tournaments");
+    setTournaments(data || []);
+  };
+
   useEffect(() => {
-    fetchTeams();
-    fetchTournaments();
+    loadTeams();
+    loadTournaments();
   }, []);
-
-  const fetchTeams = async () => {
-    const res = await axios.get("http://localhost:5000/api/teams");
-    setTeams(res.data);
-  };
-
-  const fetchTournaments = async () => {
-    const res = await axios.get("http://localhost:5000/api/tournaments");
-    setTournaments(res.data);
-  };
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (editingId) {
-      await axios.put(`http://localhost:5000/api/teams/${editingId}`, formData);
-      setEditingId(null);
+      await fetchJSON(`http://localhost:5000/api/teams/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
     } else {
-      await axios.post("http://localhost:5000/api/teams", formData);
+      await fetchJSON("http://localhost:5000/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
     }
-
-    setFormData({ name: "", logo: "", tournamentId: "" });
-    await fetchTeams();
-  };
-
-  const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/teams/${id}`);
-    fetchTeams();
+    setForm({ name: "", logo: "", tournament: "" });
+    setEditingId(null);
+    await loadTeams();
   };
 
   const handleEdit = (team) => {
-    setEditingId(team._id);
-    setFormData({
+    setForm({
       name: team.name,
-      logo: team.logo || "",
-      tournamentId: team.tournamentId?._id || "",
+      logo: team.logo,
+      tournament: team.tournament?._id || "",
     });
+    setEditingId(team._id);
   };
 
-  // Agrupación por torneo
-  const groupedByTournament = tournaments.map((t) => ({
-    tournament: t,
+  const handleDelete = async (id) => {
+    await fetchJSON(`http://localhost:5000/api/teams/${id}`, {
+      method: "DELETE",
+    });
+    await loadTeams();
+  };
+
+  const groupedByTournament = tournaments.map((tournament) => ({
+    ...tournament,
     teams: teams.filter(
-      (team) => String(team.tournamentId?._id) === String(t._id)
+      (team) =>
+        team.tournament && String(team.tournament._id) === String(tournament._id)
     ),
   }));
 
   return (
-    <div className="p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-6 text-black">Gestión de Equipos</h1>
-
+    <div className="w-full max-w-6xl mx-auto px-4 py-6 text-black">
       {/* Formulario */}
-      <Card>
-        <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-xl">
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-center mb-4">
+          ➕ {editingId ? "Editar Equipo" : "Crear Equipo"}
+        </h2>
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
           <input
             type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="Nombre del equipo"
-            className="w-full p-2 border rounded text-black"
+            placeholder="Nombre del Equipo"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="border p-2 rounded text-black"
             required
           />
-
           <input
             type="text"
-            name="logo"
-            value={formData.logo}
-            onChange={handleChange}
-            placeholder="URL del escudo"
-            className="w-full p-2 border rounded text-black"
+            placeholder="URL Escudo"
+            value={form.logo}
+            onChange={(e) => setForm({ ...form, logo: e.target.value })}
+            className="border p-2 rounded text-black"
           />
-
-          {/* Dropdown torneos */}
           <select
-            name="tournamentId"
-            value={formData.tournamentId}
-            onChange={handleChange}
-            className="w-full p-2 border rounded text-black"
+            value={form.tournament}
+            onChange={(e) => setForm({ ...form, tournament: e.target.value })}
+            className="border p-2 rounded text-black"
             required
           >
-            <option value="">Seleccionar torneo</option>
+            <option value="">Seleccionar Torneo</option>
             {tournaments.map((t) => (
               <option key={t._id} value={t._id}>
                 {t.name}
               </option>
             ))}
           </select>
-
           <button
             type="submit"
-            className={`px-4 py-2 rounded text-white ${
-              editingId ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className="col-span-1 md:col-span-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
           >
-            {editingId ? "Actualizar Equipo" : "Agregar Equipo"}
+            {editingId ? "Actualizar" : "Guardar"}
           </button>
         </form>
-      </Card>
+      </div>
 
-      {/* Listado agrupado por torneo */}
-      <div className="grid gap-6 mt-6 w-full max-w-5xl">
-        {groupedByTournament.map(({ tournament, teams }) => (
-          <Card key={tournament._id}>
-            <div className="flex items-center justify-center gap-2 mb-4">
-              {tournament.logo && (
-                <img
-                  src={tournament.logo}
-                  alt={tournament.name}
-                  className="w-8 h-8 object-cover"
-                />
-              )}
-              <h2 className="text-xl font-bold text-black">{tournament.name}</h2>
-            </div>
+      {/* Lista agrupada */}
+      <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-6">
+        ⚽ Lista de Equipos
+      </h2>
+      {groupedByTournament.map((group) => (
+        <div key={group._id} className="mb-10">
+          {/* Escudo y nombre del torneo centrados */}
+          <div className="flex flex-col items-center mb-6">
+            <img
+              src={group.logo || "/default-logo.png"}
+              alt={group.name}
+              className="w-24 h-24 rounded-full object-cover border mb-2"
+            />
+            <h3 className="text-2xl font-bold">{group.name}</h3>
+          </div>
 
-            {teams.length === 0 ? (
-              <p className="text-center text-gray-600">
+          {/* Cards de equipos */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {group.teams.length === 0 ? (
+              <p className="text-gray-500 col-span-full text-center">
                 No hay equipos en este torneo.
               </p>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {teams.map((team) => (
-                  <div
-                    key={team._id}
-                    className="flex flex-col items-center bg-gray-100 p-3 rounded-lg"
-                  >
-                    {team.logo && (
-                      <img
-                        src={team.logo}
-                        alt={team.name}
-                        className="w-12 h-12 object-cover mb-2"
-                      />
-                    )}
-                    <p className="font-semibold text-black">{team.name}</p>
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => handleEdit(team)}
-                        className="bg-yellow-500 text-white text-sm px-2 py-1 rounded hover:bg-yellow-600"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(team._id)}
-                        className="bg-red-600 text-white text-sm px-2 py-1 rounded hover:bg-red-700"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
+              group.teams.map((team) => (
+                <div
+                  key={team._id}
+                  className="bg-white rounded-lg shadow p-4 flex flex-col items-center text-center"
+                >
+                  <img
+                    src={team.logo || "/default-logo.png"}
+                    alt={team.name}
+                    className="w-16 h-16 object-cover rounded-full mb-3 border"
+                  />
+                  <h4 className="text-md font-bold">{team.name}</h4>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => handleEdit(team)}
+                      className="bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1 rounded text-sm"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(team._id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                    >
+                      Eliminar
+                    </button>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
-          </Card>
-        ))}
-      </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
 
 export default TeamPage;
-
-
-
-
-
-
-

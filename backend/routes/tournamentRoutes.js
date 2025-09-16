@@ -4,7 +4,7 @@ import Tournament from "../models/Tournament.js";
 const router = express.Router();
 
 // ============================
-// Obtener todos los torneos
+// Listar torneos
 // ============================
 router.get("/", async (req, res) => {
   try {
@@ -20,15 +20,13 @@ router.get("/", async (req, res) => {
 // ============================
 router.post("/", async (req, res) => {
   try {
-    const { name, logo, rounds, teamsCount, startDate, endDate } = req.body;
+    const { name, logo, totalRounds, totalTeams } = req.body;
 
     const tournament = new Tournament({
       name,
       logo,
-      rounds,
-      teamsCount,
-      startDate,
-      endDate,
+      totalRounds,
+      totalTeams,
     });
 
     const saved = await tournament.save();
@@ -43,11 +41,11 @@ router.post("/", async (req, res) => {
 // ============================
 router.put("/:id", async (req, res) => {
   try {
-    const { name, logo, rounds, teamsCount, startDate, endDate } = req.body;
+    const { name, logo, totalRounds, totalTeams } = req.body;
 
     const updated = await Tournament.findByIdAndUpdate(
       req.params.id,
-      { name, logo, rounds, teamsCount, startDate, endDate },
+      { name, logo, totalRounds, totalTeams },
       { new: true }
     );
 

@@ -4,21 +4,17 @@ import Team from "../models/Team.js";
 
 const router = express.Router();
 
-// helper para populate consistente
-const playerPopulate = [
-  {
-    path: "team",
-    select: "name logo tournamentId",
-    populate: { path: "tournamentId", select: "name logo" },
-  },
-];
-
 // ============================
-// Obtener todos los jugadores (con equipo y torneo)
+// Obtener todos los jugadores (con equipo y torneo populado)
 // ============================
 router.get("/", async (req, res) => {
   try {
-    const players = await Player.find().populate(playerPopulate);
+    const players = await Player.find()
+      .populate({
+        path: "team",
+        select: "name logo tournament",
+        populate: { path: "tournament", select: "name logo" },
+      });
     res.json(players);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -30,47 +26,58 @@ router.get("/", async (req, res) => {
 // ============================
 router.post("/", async (req, res) => {
   try {
-    const { name, position, photo, team } = req.body;
-
-    if (!team) return res.status(400).json({ message: "Falta el equipo" });
+    const { name, position, photo, goals, yellowCards, redCards, team } =
+      req.body;
 
     const existingTeam = await Team.findById(team);
     if (!existingTeam) {
       return res.status(400).json({ message: "Equipo no encontrado" });
     }
 
-    const player = new Player({ name, position, photo, team });
-    const saved = await player.save();
-    const populated = await saved.populate(playerPopulate);
+    const player = new Player({
+      name,
+      position,
+      photo,
+      goals: goals || 0,
+      yellowCards: yellowCards || 0,
+      redCards: redCards || 0,
+      team,
+    });
 
-    res.status(201).json(populated);
+    const savedPlayer = await player.save();
+    const populatedPlayer = await savedPlayer.populate({
+      path: "team",
+      select: "name logo tournament",
+      populate: { path: "tournament", select: "name logo" },
+    });
+
+    res.status(201).json(populatedPlayer);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
 
 // ============================
-// Actualizar jugador
+// Actualizar jugador (general)
 // ============================
 router.put("/:id", async (req, res) => {
   try {
-    const { name, position, photo, team } = req.body;
+    const { name, position, photo, goals, yellowCards, redCards, team } =
+      req.body;
 
-    if (team) {
-      const existingTeam = await Team.findById(team);
-      if (!existingTeam) {
-        return res.status(400).json({ message: "Equipo no encontrado" });
-      }
-    }
-
-    const updated = await Player.findByIdAndUpdate(
+    const player = await Player.findByIdAndUpdate(
       req.params.id,
-      { name, position, photo, team },
+      { name, position, photo, goals, yellowCards, redCards, team },
       { new: true }
-    ).populate(playerPopulate);
+    ).populate({
+      path: "team",
+      select: "name logo tournament",
+      populate: { path: "tournament", select: "name logo" },
+    });
 
-    if (!updated) return res.status(404).json({ message: "Jugador no encontrado" });
-    res.json(updated);
+    if (!player) return res.status(404).json({ message: "Jugador no encontrado" });
+
+    res.json(player);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -90,20 +97,55 @@ router.delete("/:id", async (req, res) => {
 });
 
 // ============================
-// Jugadores de un torneo (a través de equipos del torneo)
+// Jugadores de un torneo
 // ============================
 router.get("/tournament/:tournamentId", async (req, res) => {
   try {
-    const teams = await Team.find({ tournamentId: req.params.tournamentId }).select("_id");
-    const teamIds = teams.map((t) => t._id);
+    const teams = await Team.find({ tournament: req.params.tournamentId }).select("_id");
+    const players = await Player.find({ team: { $in: teams.map((t) => t._id) } })
+      .populate({
+        path: "team",
+        select: "name logo tournament",
+        populate: { path: "tournament", select: "name logo" },
+      });
 
-    const players = await Player.find({ team: { $in: teamIds } }).populate(playerPopulate);
     res.json(players);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
+// ============================
+// Actualizar SOLO estadísticas (goles, amarillas, rojas)
+// ============================
+router.patch("/:id/stats", async (req, res) => {
+  try {
+    const { goals, yellowCards, redCards } = req.body;
+
+    const player = await Player.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...(goals !== undefined && { goals }),
+        ...(yellowCards !== undefined && { yellowCards }),
+        ...(redCards !== undefined && { redCards }),
+      },
+      { new: true }
+    ).populate({
+      path: "team",
+      select: "name logo tournament",
+      populate: { path: "tournament", select: "name logo" },
+    });
+
+    if (!player) return res.status(404).json({ message: "Jugador no encontrado" });
+
+    res.json(player);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 export default router;
+
+
 
 

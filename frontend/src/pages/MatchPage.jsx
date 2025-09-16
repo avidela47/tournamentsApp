@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import Card from "../components/Card";
+import React, { useState, useEffect } from "react";
 
 const MatchPage = () => {
   const [matches, setMatches] = useState([]);
-  const [tournaments, setTournaments] = useState([]);
   const [teams, setTeams] = useState([]);
-  const [formData, setFormData] = useState({
-    tournamentId: "",
-    round: "", // número de fecha
+  const [tournaments, setTournaments] = useState([]);
+  const [form, setForm] = useState({
+    tournament: "",
+    date: "",
+    jornada: "",
     homeTeam: "",
     awayTeam: "",
     homeGoals: "",
@@ -17,124 +16,110 @@ const MatchPage = () => {
   });
   const [editingId, setEditingId] = useState(null);
 
+  const fetchJSON = async (url, options = {}) => {
+    const res = await fetch(url, options);
+    if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
+    return res.json();
+  };
+
+  const loadMatches = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/matches");
+    setMatches(data || []);
+  };
+
+  const loadTeams = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/teams");
+    setTeams(data || []);
+  };
+
+  const loadTournaments = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/tournaments");
+    setTournaments(data || []);
+  };
+
   useEffect(() => {
-    fetchTournaments();
-    fetchMatches();
+    loadMatches();
+    loadTeams();
+    loadTournaments();
   }, []);
-
-  const fetchTournaments = async () => {
-    const res = await axios.get("http://localhost:5000/api/tournaments");
-    setTournaments(res.data);
-  };
-
-  const fetchTeams = async (tournamentId) => {
-    if (!tournamentId) {
-      setTeams([]);
-      return;
-    }
-    try {
-      const res = await axios.get(
-        `http://localhost:5000/api/teams/tournament/${tournamentId}`
-      );
-      setTeams(res.data);
-    } catch (err) {
-      console.error("Error cargando equipos:", err);
-      setTeams([]);
-    }
-  };
-
-  const fetchMatches = async () => {
-    const res = await axios.get("http://localhost:5000/api/matches");
-    setMatches(res.data);
-  };
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleTournamentChange = (e) => {
-    const value = e.target.value;
-    setFormData((prev) => ({ ...prev, tournamentId: value, homeTeam: "", awayTeam: "" }));
-    fetchTeams(value);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (editingId) {
-      await axios.put(`http://localhost:5000/api/matches/${editingId}`, formData);
-      setEditingId(null);
+      await fetchJSON(`http://localhost:5000/api/matches/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
     } else {
-      await axios.post("http://localhost:5000/api/matches", formData);
+      await fetchJSON("http://localhost:5000/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
     }
-
-    setFormData({
-      tournamentId: "",
-      round: "",
+    setForm({
+      tournament: "",
+      date: "",
+      jornada: "",
       homeTeam: "",
       awayTeam: "",
       homeGoals: "",
       awayGoals: "",
       referee: "",
     });
-    await fetchMatches();
-  };
-
-  const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/matches/${id}`);
-    fetchMatches();
+    setEditingId(null);
+    await loadMatches();
   };
 
   const handleEdit = (match) => {
-    setEditingId(match._id);
-    setFormData({
-      tournamentId: match.tournamentId?._id || "",
-      round: match.round || "",
+    setForm({
+      tournament: match.tournament?._id || "",
+      date: match.date?.substring(0, 10) || "",
+      jornada: match.jornada || "",
       homeTeam: match.homeTeam?._id || "",
       awayTeam: match.awayTeam?._id || "",
-      homeGoals: match.homeGoals || "",
-      awayGoals: match.awayGoals || "",
-      referee: match.referee || "",
+      homeGoals: match.homeGoals,
+      awayGoals: match.awayGoals,
+      referee: match.referee,
     });
-
-    if (match.tournamentId?._id) {
-      fetchTeams(match.tournamentId._id);
-    }
+    setEditingId(match._id);
   };
 
-  // Agrupación por torneo → fechas
-  const groupedByTournament = tournaments.map((t) => {
-    const tournamentMatches = matches.filter(
-      (m) => String(m.tournamentId?._id) === String(t._id)
-    );
+  const handleDelete = async (id) => {
+    await fetchJSON(`http://localhost:5000/api/matches/${id}`, {
+      method: "DELETE",
+    });
+    await loadMatches();
+  };
 
-    // Agrupar por número de fecha (round)
-    const groupedByRound = tournamentMatches.reduce((acc, match) => {
-      const round = match.round || "Sin fecha";
-      if (!acc[round]) acc[round] = [];
-      acc[round].push(match);
-      return acc;
-    }, {});
-
-    return { tournament: t, rounds: groupedByRound };
-  });
+  // Agrupación de partidos por torneo y fecha
+  const groupedMatches = tournaments.map((t) => ({
+    ...t,
+    matches: matches
+      .filter((m) => m.tournament && String(m.tournament._id) === String(t._id))
+      .sort((a, b) => new Date(a.date) - new Date(b.date)),
+  }));
 
   return (
-    <div className="p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-6 text-black">Gestión de Partidos</h1>
-
+    <div className="w-full max-w-6xl mx-auto px-4 py-6 text-black">
       {/* Formulario */}
-      <Card>
-        <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-xl">
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-center mb-4">
+          ➕ {editingId ? "Editar Partido" : "Crear Partido"}
+        </h2>
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-center"
+        >
           {/* Torneo */}
           <select
-            name="tournamentId"
-            value={formData.tournamentId}
-            onChange={handleTournamentChange}
-            className="w-full p-2 border rounded text-black"
+            value={form.tournament}
+            onChange={(e) => setForm({ ...form, tournament: e.target.value })}
+            className="border p-2 rounded text-black w-full"
             required
           >
-            <option value="">Seleccionar torneo</option>
+            <option value="">-- Seleccionar Torneo --</option>
             {tournaments.map((t) => (
               <option key={t._id} value={t._id}>
                 {t.name}
@@ -142,175 +127,184 @@ const MatchPage = () => {
             ))}
           </select>
 
-          {/* Número de fecha */}
+          {/* Fecha del partido */}
           <input
-            type="number"
-            name="round"
-            value={formData.round}
-            onChange={handleChange}
-            placeholder="Número de fecha (1, 2, 3...)"
-            className="w-full p-2 border rounded text-black"
-            required
+            type="date"
+            placeholder="Fecha del partido"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            className="border p-2 rounded text-black w-full"
           />
 
-          {/* Equipo local */}
-          <select
-            name="homeTeam"
-            value={formData.homeTeam}
-            onChange={handleChange}
-            className="w-full p-2 border rounded text-black"
-            required
-          >
-            <option value="">Seleccionar equipo local</option>
-            {teams.map((team) => (
-              <option key={team._id} value={team._id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
+          {/* Número de jornada */}
+          <input
+            type="number"
+            placeholder="Fecha (ej: 1, 2, 3...)"
+            value={form.jornada}
+            onChange={(e) => setForm({ ...form, jornada: e.target.value })}
+            className="border p-2 rounded text-black w-full"
+            min="1"
+          />
 
-          {/* Equipo visitante */}
-          <select
-            name="awayTeam"
-            value={formData.awayTeam}
-            onChange={handleChange}
-            className="w-full p-2 border rounded text-black"
-            required
-          >
-            <option value="">Seleccionar equipo visitante</option>
-            {teams.map((team) => (
-              <option key={team._id} value={team._id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Goles */}
+          {/* Equipo local + goles */}
           <div className="flex gap-2">
+            <select
+              value={form.homeTeam}
+              onChange={(e) => setForm({ ...form, homeTeam: e.target.value })}
+              className="border p-2 rounded text-black w-2/3"
+              required
+            >
+              <option value="">-- Equipo Local --</option>
+              {teams
+                .filter((team) => String(team.tournament?._id) === form.tournament)
+                .map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
+                  </option>
+                ))}
+            </select>
             <input
               type="number"
-              name="homeGoals"
-              value={formData.homeGoals}
-              onChange={handleChange}
-              placeholder="Goles local"
-              className="w-full p-2 border rounded text-black"
+              placeholder="Goles Local"
+              value={form.homeGoals}
+              onChange={(e) => setForm({ ...form, homeGoals: e.target.value })}
+              className="border p-2 rounded text-black w-1/3"
             />
+          </div>
+
+          {/* Equipo visitante + goles */}
+          <div className="flex gap-2">
+            <select
+              value={form.awayTeam}
+              onChange={(e) => setForm({ ...form, awayTeam: e.target.value })}
+              className="border p-2 rounded text-black w-2/3"
+              required
+            >
+              <option value="">-- Equipo Visitante --</option>
+              {teams
+                .filter((team) => String(team.tournament?._id) === form.tournament)
+                .map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
+                  </option>
+                ))}
+            </select>
             <input
               type="number"
-              name="awayGoals"
-              value={formData.awayGoals}
-              onChange={handleChange}
-              placeholder="Goles visitante"
-              className="w-full p-2 border rounded text-black"
+              placeholder="Goles Visitante"
+              value={form.awayGoals}
+              onChange={(e) => setForm({ ...form, awayGoals: e.target.value })}
+              className="border p-2 rounded text-black w-1/3"
             />
           </div>
 
           {/* Árbitro */}
           <input
             type="text"
-            name="referee"
-            value={formData.referee}
-            onChange={handleChange}
             placeholder="Árbitro"
-            className="w-full p-2 border rounded text-black"
+            value={form.referee}
+            onChange={(e) => setForm({ ...form, referee: e.target.value })}
+            className="border p-2 rounded text-black w-full md:w-2/3"
           />
 
           <button
             type="submit"
-            className={`px-4 py-2 rounded text-white ${
-              editingId ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className="col-span-1 md:col-span-2 lg:col-span-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
           >
-            {editingId ? "Actualizar Partido" : "Agregar Partido"}
+            {editingId ? "Actualizar" : "Guardar"}
           </button>
         </form>
-      </Card>
+      </div>
 
-      {/* Listado agrupado */}
-      <div className="grid gap-6 mt-6 w-full max-w-5xl">
-        {groupedByTournament.map(({ tournament, rounds }) => (
-          <Card key={tournament._id}>
-            <div className="flex items-center justify-center gap-2 mb-4">
-              {tournament.logo && (
-                <img
-                  src={tournament.logo}
-                  alt={tournament.name}
-                  className="w-8 h-8 object-cover"
-                />
-              )}
-              <h2 className="text-xl font-bold text-black">{tournament.name}</h2>
-            </div>
+      {/* Render partidos agrupados */}
+      <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-6">
+        📅 Lista de Partidos
+      </h2>
+      {groupedMatches.map((tournament) => (
+        <div key={tournament._id} className="mb-10">
+          {/* Torneo */}
+          <div className="flex flex-col items-center mb-6">
+            <img
+              src={tournament.logo || "/default-logo.png"}
+              alt={tournament.name}
+              className="w-24 h-24 rounded-full object-cover border mb-2"
+            />
+            <h3 className="text-2xl font-bold">{tournament.name}</h3>
+          </div>
 
-            {Object.keys(rounds).length === 0 ? (
-              <p className="text-center text-gray-600">
-                No hay partidos para este torneo.
-              </p>
-            ) : (
-              Object.entries(rounds).map(([round, matches]) => (
-                <div key={round} className="mb-4">
-                  <h3 className="text-lg font-semibold text-black mb-2">
-                    Fecha {round}
-                  </h3>
-                  <div className="space-y-4">
-                    {matches.map((match) => (
-                      <div
-                        key={match._id}
-                        className="flex flex-col items-center bg-gray-100 p-3 rounded-lg"
-                      >
-                        <div className="flex items-center gap-4">
-                          {match.homeTeam?.logo && (
-                            <img
-                              src={match.homeTeam.logo}
-                              alt={match.homeTeam.name}
-                              className="w-8 h-8 object-cover"
-                            />
-                          )}
-                          <span className="font-semibold text-black">
-                            {match.homeTeam?.name}
-                          </span>
-                          <span className="text-black">
-                            {match.homeGoals} - {match.awayGoals}
-                          </span>
-                          <span className="font-semibold text-black">
-                            {match.awayTeam?.name}
-                          </span>
-                          {match.awayTeam?.logo && (
-                            <img
-                              src={match.awayTeam.logo}
-                              alt={match.awayTeam.name}
-                              className="w-8 h-8 object-cover"
-                            />
-                          )}
+          {/* Fechas */}
+          {tournament.matches.length === 0 ? (
+            <p className="text-gray-500 text-center">
+              No hay partidos en este torneo.
+            </p>
+          ) : (
+            [...new Set(tournament.matches.map((m) => m.jornada))].map(
+              (jornada) => (
+                <div key={jornada} className="mb-6">
+                  <h4 className="text-lg font-bold uppercase text-center mb-3">
+                    FECHA {jornada}
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {tournament.matches
+                      .filter((m) => m.jornada === jornada)
+                      .map((match) => (
+                        <div
+                          key={match._id}
+                          className="bg-white rounded-lg shadow p-2 flex flex-col items-center text-center"
+                        >
+                          <p className="text-xs text-gray-600 mb-2">
+                            {new Date(match.date).toLocaleDateString()} — Árbitro:{" "}
+                            {match.referee}
+                          </p>
+                          <div className="flex items-center justify-center gap-3">
+                            <div className="flex flex-col items-center">
+                              <img
+                                src={match.homeTeam?.logo || "/default-logo.png"}
+                                alt={match.homeTeam?.name}
+                                className="w-10 h-10 rounded-full border mb-1"
+                              />
+                              <p className="text-sm">{match.homeTeam?.name}</p>
+                            </div>
+                            <span className="font-bold text-base">
+                              {match.homeGoals} - {match.awayGoals}
+                            </span>
+                            <div className="flex flex-col items-center">
+                              <img
+                                src={match.awayTeam?.logo || "/default-logo.png"}
+                                alt={match.awayTeam?.name}
+                                className="w-10 h-10 rounded-full border mb-1"
+                              />
+                              <p className="text-sm">{match.awayTeam?.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => handleEdit(match)}
+                              className="bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1 rounded text-xs"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(match._id)}
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-gray-700 mt-2">
-                          Árbitro: {match.referee || "Sin asignar"}
-                        </p>
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            onClick={() => handleEdit(match)}
-                            className="bg-yellow-500 text-white text-sm px-2 py-1 rounded hover:bg-yellow-600"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(match._id)}
-                            className="bg-red-600 text-white text-sm px-2 py-1 rounded hover:bg-red-700"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
-              ))
-            )}
-          </Card>
-        ))}
-      </div>
+              )
+            )
+          )}
+        </div>
+      ))}
     </div>
   );
 };
 
 export default MatchPage;
+
+
 

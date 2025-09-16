@@ -1,306 +1,334 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import Card from "../components/Card";
+import React, { useState, useEffect } from "react";
 
 const PlayerPage = () => {
   const [players, setPlayers] = useState([]);
-  const [tournaments, setTournaments] = useState([]);
   const [teams, setTeams] = useState([]);
-  const [showTeams, setShowTeams] = useState(false);
-
-  const [formData, setFormData] = useState({
+  const [tournaments, setTournaments] = useState([]);
+  const [form, setForm] = useState({
     name: "",
+    position: "",
     photo: "",
+    goals: 0,
+    yellowCards: 0,
+    redCards: 0,
     team: "",
-    tournamentId: "",
+    tournament: "",
   });
   const [editingId, setEditingId] = useState(null);
+  const [updatingStats, setUpdatingStats] = useState({}); // para stats rápidas
+
+  const fetchJSON = async (url, options = {}) => {
+    const res = await fetch(url, options);
+    if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
+    return res.json();
+  };
+
+  const loadPlayers = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/players");
+    setPlayers(data || []);
+  };
+
+  const loadTeams = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/teams");
+    setTeams(data || []);
+  };
+
+  const loadTournaments = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/tournaments");
+    setTournaments(data || []);
+  };
 
   useEffect(() => {
-    fetchTournaments();
-    fetchPlayers();
+    loadPlayers();
+    loadTeams();
+    loadTournaments();
   }, []);
-
-  const fetchTournaments = async () => {
-    const res = await axios.get("http://localhost:5000/api/tournaments");
-    setTournaments(res.data);
-  };
-
-  const fetchTeams = async (tournamentId) => {
-    if (!tournamentId) {
-      setTeams([]);
-      return;
-    }
-    try {
-      const res = await axios.get(
-        `http://localhost:5000/api/teams/tournament/${tournamentId}`
-      );
-      setTeams(res.data);
-    } catch (err) {
-      console.error("Error cargando equipos:", err);
-      setTeams([]);
-    }
-  };
-
-  const fetchPlayers = async () => {
-    const res = await axios.get("http://localhost:5000/api/players");
-    setPlayers(res.data);
-  };
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleTournamentChange = (e) => {
-    const value = e.target.value;
-    setFormData((prev) => ({ ...prev, tournamentId: value, team: "" }));
-    fetchTeams(value);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (editingId) {
-      await axios.put(`http://localhost:5000/api/players/${editingId}`, formData);
-      setEditingId(null);
+      await fetchJSON(`http://localhost:5000/api/players/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
     } else {
-      await axios.post("http://localhost:5000/api/players", formData);
+      await fetchJSON("http://localhost:5000/api/players", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
     }
-
-    setFormData({ name: "", photo: "", team: "", tournamentId: "" });
-    await fetchPlayers();
-  };
-
-  const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/players/${id}`);
-    fetchPlayers();
+    setForm({
+      name: "",
+      position: "",
+      photo: "",
+      goals: 0,
+      yellowCards: 0,
+      redCards: 0,
+      team: "",
+      tournament: "",
+    });
+    setEditingId(null);
+    await loadPlayers();
   };
 
   const handleEdit = (player) => {
-    setEditingId(player._id);
-    setFormData({
+    setForm({
       name: player.name,
-      photo: player.photo || "",
+      position: player.position,
+      photo: player.photo,
+      goals: player.goals,
+      yellowCards: player.yellowCards,
+      redCards: player.redCards,
       team: player.team?._id || "",
-      tournamentId: player.team?.tournamentId?._id || "",
+      tournament: player.team?.tournament || "",
     });
-
-    if (player.team?.tournamentId?._id) {
-      fetchTeams(player.team.tournamentId._id);
-    }
+    setEditingId(player._id);
   };
 
-  // Agrupación por torneo → equipos
-  const groupedByTournament = tournaments.map((t) => {
-    const teamsInTournament = teams.length
-      ? teams
-      : players
-          .map((p) => p.team?.tournamentId?._id)
-          .filter((tid) => String(tid) === String(t._id));
+  const handleDelete = async (id) => {
+    await fetchJSON(`http://localhost:5000/api/players/${id}`, {
+      method: "DELETE",
+    });
+    await loadPlayers();
+  };
 
-    return {
-      tournament: t,
-      teams: players
-        .filter((p) => String(p.team?.tournamentId?._id) === String(t._id))
-        .reduce((acc, player) => {
-          const teamId = player.team?._id;
-          if (!acc[teamId]) {
-            acc[teamId] = {
-              ...player.team,
-              players: [],
-            };
-          }
-          acc[teamId].players.push(player);
-          return acc;
-        }, {}),
-    };
-  });
+  // 🔥 actualizar solo estadísticas desde la card
+  const handleUpdateStats = async (id) => {
+    const stats = updatingStats[id];
+    if (!stats) return;
+    await fetchJSON(`http://localhost:5000/api/players/${id}/stats`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(stats),
+    });
+    await loadPlayers();
+  };
+
+  // Agrupación por torneo y equipo
+  const groupedByTournament = tournaments.map((tournament) => ({
+    ...tournament,
+    teams: teams
+      .filter((team) => String(team.tournament?._id) === String(tournament._id))
+      .map((team) => ({
+        ...team,
+        players: players.filter(
+          (player) => String(player.team?._id) === String(team._id)
+        ),
+      })),
+  }));
 
   return (
-    <div className="p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-6 text-black">Gestión de Jugadores</h1>
-
+    <div className="w-full max-w-6xl mx-auto px-4 py-6 text-black">
       {/* Formulario */}
-      <Card>
-        <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-xl">
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-center mb-4">
+          ➕ {editingId ? "Editar Jugador" : "Crear Jugador"}
+        </h2>
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
           <input
             type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="Nombre del jugador"
-            className="w-full p-2 border rounded text-black"
+            placeholder="Nombre del Jugador"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="border p-2 rounded text-black"
             required
           />
-
           <input
             type="text"
-            name="photo"
-            value={formData.photo}
-            onChange={handleChange}
-            placeholder="URL de la foto"
-            className="w-full p-2 border rounded text-black"
+            placeholder="Posición"
+            value={form.position}
+            onChange={(e) => setForm({ ...form, position: e.target.value })}
+            className="border p-2 rounded text-black"
           />
-
-          {/* Dropdown de torneos */}
+          <input
+            type="text"
+            placeholder="URL Foto"
+            value={form.photo}
+            onChange={(e) => setForm({ ...form, photo: e.target.value })}
+            className="border p-2 rounded text-black"
+          />
           <select
-            name="tournamentId"
-            value={formData.tournamentId}
-            onChange={handleTournamentChange}
-            className="w-full p-2 border rounded text-black"
+            value={form.tournament}
+            onChange={(e) => setForm({ ...form, tournament: e.target.value })}
+            className="border p-2 rounded text-black"
             required
           >
-            <option value="">Seleccionar torneo</option>
+            <option value="">Seleccionar Torneo</option>
             {tournaments.map((t) => (
               <option key={t._id} value={t._id}>
                 {t.name}
               </option>
             ))}
           </select>
-
-          {/* Dropdown custom de equipos */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowTeams(!showTeams)}
-              className="w-full p-2 border rounded text-black flex justify-between items-center"
-            >
-              {formData.team
-                ? teams.find((t) => t._id === formData.team)?.name
-                : "Seleccionar equipo"}
-              <span className="ml-2">▼</span>
-            </button>
-
-            {showTeams && (
-              <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-y-auto">
-                {teams.map((team) => (
-                  <div
-                    key={team._id}
-                    className="flex items-center gap-2 p-2 hover:bg-gray-200 cursor-pointer"
-                    onClick={() => {
-                      setFormData((prev) => ({ ...prev, team: team._id }));
-                      setShowTeams(false);
-                    }}
-                  >
-                    {team.logo && (
-                      <img
-                        src={team.logo}
-                        alt={team.name}
-                        className="w-6 h-6 object-cover rounded"
-                      />
-                    )}
-                    <span className="text-black">{team.name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
+          <select
+            value={form.team}
+            onChange={(e) => setForm({ ...form, team: e.target.value })}
+            className="border p-2 rounded text-black"
+            required
+          >
+            <option value="">Seleccionar Equipo</option>
+            {teams
+              .filter((team) => String(team.tournament?._id) === form.tournament)
+              .map((t) => (
+                <option key={t._id} value={t._id}>
+                  {t.name}
+                </option>
+              ))}
+          </select>
           <button
             type="submit"
-            className={`px-4 py-2 rounded text-white ${
-              editingId ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className="col-span-1 md:col-span-2 lg:col-span-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
           >
-            {editingId ? "Actualizar Jugador" : "Agregar Jugador"}
+            {editingId ? "Actualizar" : "Guardar"}
           </button>
         </form>
-      </Card>
-
-      {/* Listado agrupado */}
-      <div className="grid gap-6 mt-6 w-full max-w-5xl">
-        {groupedByTournament.map(({ tournament, teams }) => (
-          <Card key={tournament._id}>
-            <div className="flex items-center justify-center gap-2 mb-4">
-              {tournament.logo && (
-                <img
-                  src={tournament.logo}
-                  alt={tournament.name}
-                  className="w-8 h-8 object-cover"
-                />
-              )}
-              <h2 className="text-xl font-bold text-black">{tournament.name}</h2>
-            </div>
-
-            {Object.values(teams).length === 0 ? (
-              <p className="text-center text-gray-600">
-                No hay jugadores para este torneo.
-              </p>
-            ) : (
-              Object.values(teams).map((team) => (
-                <div key={team._id} className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    {team.logo && (
-                      <img
-                        src={team.logo}
-                        alt={team.name}
-                        className="w-6 h-6 object-cover"
-                      />
-                    )}
-                    <h3 className="font-semibold text-black">{team.name}</h3>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {team.players.map((player) => (
-                      <div
-                        key={player._id}
-                        className="flex flex-col items-center bg-gray-100 p-3 rounded-lg"
-                      >
-                        {player.photo && (
-                          <img
-                            src={player.photo}
-                            alt={player.name}
-                            className="w-12 h-12 object-cover mb-2"
-                          />
-                        )}
-                        <div className="flex items-center gap-2">
-                          {team.logo && (
-                            <img
-                              src={team.logo}
-                              alt={team.name}
-                              className="w-6 h-6 object-cover"
-                            />
-                          )}
-                          <p className="font-semibold text-black">
-                            {player.name}
-                          </p>
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            onClick={() => handleEdit(player)}
-                            className="bg-yellow-500 text-white text-sm px-2 py-1 rounded hover:bg-yellow-600"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(player._id)}
-                            className="bg-red-600 text-white text-sm px-2 py-1 rounded hover:bg-red-700"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </Card>
-        ))}
       </div>
+
+      {/* Lista agrupada */}
+      <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-6">
+        🧑‍🤝‍🧑 Lista de Jugadores
+      </h2>
+      {groupedByTournament.map((tournament) => (
+        <div key={tournament._id} className="mb-10">
+          {/* Torneo */}
+          <div className="flex flex-col items-center mb-6">
+            <img
+              src={tournament.logo || "/default-logo.png"}
+              alt={tournament.name}
+              className="w-24 h-24 rounded-full object-cover border mb-2"
+            />
+            <h3 className="text-2xl font-bold">{tournament.name}</h3>
+          </div>
+
+          {/* Equipos */}
+          {tournament.teams.map((team) => (
+            <div key={team._id} className="mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <img
+                  src={team.logo || "/default-logo.png"}
+                  alt={team.name}
+                  className="w-10 h-10 rounded-full border"
+                />
+                <h4 className="text-xl font-bold">{team.name}</h4>
+              </div>
+
+              {/* Jugadores */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {team.players.length === 0 ? (
+                  <p className="text-gray-500 col-span-full text-center">
+                    No hay jugadores en este equipo.
+                  </p>
+                ) : (
+                  team.players.map((player) => (
+                    <div
+                      key={player._id}
+                      className="bg-white rounded-lg shadow p-4 flex flex-col items-center text-center"
+                    >
+                      <img
+                        src={player.photo || "/default-player.png"}
+                        alt={player.name}
+                        className="w-20 h-20 rounded-full object-cover border mb-3"
+                      />
+                      <h4 className="text-lg font-bold">{player.name}</h4>
+                      <p className="text-sm text-gray-600">
+                        {player.position}
+                      </p>
+                      <p className="text-sm mt-1">Equipo: {player.team?.name}</p>
+                      <p className="text-sm">
+                        Torneo: {player.team?.tournament?.name}
+                      </p>
+
+                      {/* Stats rápidas */}
+                      <div className="mt-3 w-full">
+                        <div className="flex justify-between text-sm mb-2">
+                          <label>⚽</label>
+                          <input
+                            type="number"
+                            defaultValue={player.goals}
+                            onChange={(e) =>
+                              setUpdatingStats((prev) => ({
+                                ...prev,
+                                [player._id]: {
+                                  ...prev[player._id],
+                                  goals: Number(e.target.value),
+                                },
+                              }))
+                            }
+                            className="w-16 border rounded p-1 text-black"
+                          />
+                        </div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <label className="text-yellow-600">🟨</label>
+                          <input
+                            type="number"
+                            defaultValue={player.yellowCards}
+                            onChange={(e) =>
+                              setUpdatingStats((prev) => ({
+                                ...prev,
+                                [player._id]: {
+                                  ...prev[player._id],
+                                  yellowCards: Number(e.target.value),
+                                },
+                              }))
+                            }
+                            className="w-16 border rounded p-1 text-black"
+                          />
+                        </div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <label className="text-red-600">🟥</label>
+                          <input
+                            type="number"
+                            defaultValue={player.redCards}
+                            onChange={(e) =>
+                              setUpdatingStats((prev) => ({
+                                ...prev,
+                                [player._id]: {
+                                  ...prev[player._id],
+                                  redCards: Number(e.target.value),
+                                },
+                              }))
+                            }
+                            className="w-16 border rounded p-1 text-black"
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleUpdateStats(player._id)}
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm w-full"
+                        >
+                          Guardar Stats
+                        </button>
+                      </div>
+
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => handleEdit(player)}
+                          className="bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1 rounded text-sm"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(player._id)}
+                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 };
 
 export default PlayerPage;
-
-
-
-
-
-
-
-
-
-
 

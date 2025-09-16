@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Card from "../components/Card";
-import TopScorersTable from "../components/TopScorersTable";
+import CardsTable from "../components/CardsTable";
 
-const StatsPage = () => {
+const CardsPage = () => {
   const [tournaments, setTournaments] = useState([]);
   const [selectedTournament, setSelectedTournament] = useState("");
-  const [scorers, setScorers] = useState([]);
+  const [cards, setCards] = useState({ yellow: [], red: [] });
 
   useEffect(() => {
     fetchTournaments();
@@ -21,14 +21,14 @@ const StatsPage = () => {
     }
   };
 
-  const fetchScorers = async (tournamentId) => {
+  const fetchCards = async (tournamentId) => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/stats/scorers/${tournamentId}`
+        `http://localhost:5000/api/stats/cards/${tournamentId}`
       );
-      setScorers(res.data);
+      setCards(res.data);
     } catch (err) {
-      console.error("Error cargando goleadores:", err);
+      console.error("Error cargando tarjetas:", err);
     }
   };
 
@@ -36,16 +36,16 @@ const StatsPage = () => {
     const id = e.target.value;
     setSelectedTournament(id);
     if (id) {
-      fetchScorers(id);
+      fetchCards(id);
     } else {
-      setScorers([]);
+      setCards({ yellow: [], red: [] });
     }
   };
 
   return (
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-2xl font-bold mb-6 text-black">
-        Estadísticas del Torneo
+        Tarjetas del Torneo
       </h1>
 
       {/* Seleccionar torneo */}
@@ -64,17 +64,19 @@ const StatsPage = () => {
         </select>
       </Card>
 
-      {/* Ranking de goleadores */}
+      {/* Tablas */}
       {selectedTournament && (
         <div className="mt-6 w-full max-w-3xl">
           <Card>
-            <h2 className="text-xl font-bold mb-4 text-black">Goleadores</h2>
-            {scorers.length === 0 ? (
+            {cards.yellow.length === 0 && cards.red.length === 0 ? (
               <p className="text-center text-gray-600">
-                No hay datos aún de goleadores para este torneo.
+                No hay datos de tarjetas para este torneo.
               </p>
             ) : (
-              <TopScorersTable scorers={scorers} />
+              <>
+                <CardsTable cards={cards.yellow} type="yellow" />
+                <CardsTable cards={cards.red} type="red" />
+              </>
             )}
           </Card>
         </div>
@@ -83,9 +85,4 @@ const StatsPage = () => {
   );
 };
 
-export default StatsPage;
-
-
-
-
-
+export default CardsPage;

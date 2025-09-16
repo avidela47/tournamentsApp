@@ -1,192 +1,176 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import Card from "../components/Card.jsx";
+import React, { useState, useEffect } from "react";
 
 const TournamentPage = () => {
   const [tournaments, setTournaments] = useState([]);
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
     name: "",
     logo: "",
-    rounds: "",
-    teamsCount: "",
-    startDate: "",
-    endDate: "",
+    totalRounds: "",
+    totalTeams: "",
   });
-  const [editId, setEditId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+
+  // ============================
+  // Fetch Helper
+  // ============================
+  const fetchJSON = async (url, options = {}) => {
+    const res = await fetch(url, options);
+    if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
+    return res.json();
+  };
+
+  // ============================
+  // Cargar Torneos
+  // ============================
+  const loadTournaments = async () => {
+    const data = await fetchJSON("http://localhost:5000/api/tournaments");
+    setTournaments(data || []);
+  };
 
   useEffect(() => {
-    fetchTournaments();
+    loadTournaments();
   }, []);
 
-  const fetchTournaments = async () => {
-    try {
-      const res = await axios.get("http://localhost:5000/api/tournaments");
-      setTournaments(res.data);
-    } catch (err) {
-      console.error("Error cargando torneos:", err);
-    }
-  };
-
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-
+  // ============================
+  // Crear / Actualizar Torneo
+  // ============================
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      if (editId) {
-        await axios.put(`http://localhost:5000/api/tournaments/${editId}`, formData);
-      } else {
-        await axios.post("http://localhost:5000/api/tournaments", formData);
-      }
-      setFormData({
-        name: "",
-        logo: "",
-        rounds: "",
-        teamsCount: "",
-        startDate: "",
-        endDate: "",
+
+    if (editingId) {
+      await fetchJSON(`http://localhost:5000/api/tournaments/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       });
-      setEditId(null);
-      fetchTournaments();
-    } catch (err) {
-      console.error("Error guardando torneo:", err);
+    } else {
+      await fetchJSON("http://localhost:5000/api/tournaments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
     }
+
+    setForm({ name: "", logo: "", totalRounds: "", totalTeams: "" });
+    setEditingId(null);
+    await loadTournaments();
   };
 
-  const handleEdit = (t) => {
-    setFormData({
-      name: t.name,
-      logo: t.logo || "",
-      rounds: t.rounds || "",
-      teamsCount: t.teamsCount || "",
-      startDate: t.startDate ? t.startDate.slice(0, 10) : "",
-      endDate: t.endDate ? t.endDate.slice(0, 10) : "",
+  // ============================
+  // Editar Torneo
+  // ============================
+  const handleEdit = (tournament) => {
+    setForm({
+      name: tournament.name,
+      logo: tournament.logo,
+      totalRounds: tournament.totalRounds,
+      totalTeams: tournament.totalTeams,
     });
-    setEditId(t._id);
+    setEditingId(tournament._id);
   };
 
+  // ============================
+  // Eliminar Torneo
+  // ============================
   const handleDelete = async (id) => {
-    try {
-      await axios.delete(`http://localhost:5000/api/tournaments/${id}`);
-      fetchTournaments();
-    } catch (err) {
-      console.error("Error eliminando torneo:", err);
-    }
+    await fetchJSON(`http://localhost:5000/api/tournaments/${id}`, {
+      method: "DELETE",
+    });
+    await loadTournaments();
   };
 
   return (
-    <div className="p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-6 text-black">Torneos</h1>
-
-      {/* Formulario */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-gray-100 p-6 rounded-lg shadow-md w-full max-w-md mb-6"
-      >
-        <input
-          type="text"
-          name="name"
-          placeholder="Nombre del torneo"
-          value={formData.name}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-          required
-        />
-
-        <input
-          type="text"
-          name="logo"
-          placeholder="URL del logo"
-          value={formData.logo}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-        />
-
-        <input
-          type="number"
-          name="rounds"
-          placeholder="Cantidad de fechas"
-          value={formData.rounds}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-          required
-        />
-
-        <input
-          type="number"
-          name="teamsCount"
-          placeholder="Cantidad de equipos"
-          value={formData.teamsCount}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-          required
-        />
-
-        <input
-          type="date"
-          name="startDate"
-          value={formData.startDate}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-        />
-
-        <input
-          type="date"
-          name="endDate"
-          value={formData.endDate}
-          onChange={handleChange}
-          className="w-full p-2 mb-3 border rounded text-black"
-        />
-
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+    <div className="w-full max-w-6xl mx-auto px-4 py-6 text-black">
+      {/* =======================
+          📌 FORMULARIO TORNEO
+      ======================= */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-center mb-4">
+          ➕ {editingId ? "Editar Torneo" : "Crear Torneo"}
+        </h2>
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
-          {editId ? "Actualizar" : "Agregar"}
-        </button>
-      </form>
+          <input
+            type="text"
+            placeholder="Nombre del Torneo"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="border p-2 rounded text-black"
+            required
+          />
+          <input
+            type="text"
+            placeholder="URL del Logo"
+            value={form.logo}
+            onChange={(e) => setForm({ ...form, logo: e.target.value })}
+            className="border p-2 rounded text-black"
+          />
+          <input
+            type="number"
+            placeholder="Cantidad de Fechas"
+            value={form.totalRounds}
+            onChange={(e) => setForm({ ...form, totalRounds: e.target.value })}
+            className="border p-2 rounded text-black"
+            required
+          />
+          <input
+            type="number"
+            placeholder="Cantidad de Equipos"
+            value={form.totalTeams}
+            onChange={(e) => setForm({ ...form, totalTeams: e.target.value })}
+            className="border p-2 rounded text-black"
+            required
+          />
+          <button
+            type="submit"
+            className="col-span-1 md:col-span-2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          >
+            {editingId ? "Actualizar" : "Guardar"}
+          </button>
+        </form>
+      </div>
 
-      {/* Listado */}
-      <div className="flex flex-wrap justify-center gap-6 w-full max-w-5xl">
-        {tournaments.map((t) => (
-          <Card key={t._id}>
-            <div className="flex items-center gap-3 mb-4">
-              {t.logo && (
-                <img
-                  src={t.logo}
-                  alt={t.name}
-                  className="w-12 h-12 object-contain"
-                />
-              )}
-              <h2 className="text-xl font-bold text-black">{t.name}</h2>
-            </div>
-            <p className="text-sm text-gray-600">Fechas: {t.rounds}</p>
-            <p className="text-sm text-gray-600">Equipos: {t.teamsCount || 0}</p>
-            {t.startDate && (
-              <p className="text-sm text-gray-600">
-                Desde: {new Date(t.startDate).toLocaleDateString()}
-              </p>
-            )}
-            {t.endDate && (
-              <p className="text-sm text-gray-600">
-                Hasta: {new Date(t.endDate).toLocaleDateString()}
-              </p>
-            )}
-            <div className="flex gap-2 mt-4 justify-center">
+      {/* =======================
+          📌 LISTADO TORNEOS
+      ======================= */}
+      <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-6">
+        🏆 Lista de Torneos
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {tournaments.map((tournament) => (
+          <div
+            key={tournament._id}
+            className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center text-center"
+          >
+            <img
+              src={tournament.logo || "/default-logo.png"}
+              alt={tournament.name}
+              className="w-20 h-20 object-cover mb-4"
+            />
+            <h3 className="text-lg font-bold">{tournament.name}</h3>
+            <p className="text-sm text-gray-600">
+              Fechas: {tournament.totalRounds}
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Equipos: {tournament.totalTeams}
+            </p>
+            <div className="flex gap-2">
               <button
-                onClick={() => handleEdit(t)}
-                className="bg-yellow-500 text-white px-3 py-1 rounded"
+                onClick={() => handleEdit(tournament)}
+                className="bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-1 rounded-lg font-bold"
               >
                 Editar
               </button>
               <button
-                onClick={() => handleDelete(t._id)}
-                className="bg-red-500 text-white px-3 py-1 rounded"
+                onClick={() => handleDelete(tournament._id)}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg font-bold"
               >
                 Eliminar
               </button>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
     </div>
@@ -194,4 +178,6 @@ const TournamentPage = () => {
 };
 
 export default TournamentPage;
+
+
 

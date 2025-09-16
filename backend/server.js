@@ -9,6 +9,7 @@ import teamRoutes from "./routes/teamRoutes.js";
 import playerRoutes from "./routes/playerRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
+import standingsRoutes from "./routes/standingsRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -38,6 +39,7 @@ app.use("/api/teams", teamRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/standings", standingsRoutes);
 
 // Ruta de prueba
 app.get("/", (_req, res) => res.send("API funcionando correctamente 🚀"));

@@ -2,15 +2,12 @@ import mongoose from "mongoose";
 
 const tournamentSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  logo: { type: String }, // logo o escudo del torneo
-  rounds: { type: Number, required: true }, // cantidad de fechas/jornadas
-  teamsCount: { type: Number, required: true }, // cantidad de equipos
-  startDate: { type: Date },
-  endDate: { type: Date },
+  logo: { type: String }, // URL del logo
+  totalRounds: { type: Number, default: 1 }, // cantidad de fechas
+  totalTeams: { type: Number, default: 0 },  // cantidad de equipos
+  createdAt: { type: Date, default: Date.now },
 });
 
 export default mongoose.model("Tournament", tournamentSchema);
-
-
 
 

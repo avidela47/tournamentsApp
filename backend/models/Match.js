@@ -1,12 +1,19 @@
 import mongoose from "mongoose";
 
-const matchSchema = new mongoose.Schema({
-  tournamentId: {
+const MatchSchema = new mongoose.Schema({
+  tournament: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Tournament",
     required: true,
   },
-  round: { type: Number, required: true }, // número de fecha
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+  jornada: {
+    type: Number,
+    default: 1,
+  },
   homeTeam: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Team",
@@ -17,13 +24,27 @@ const matchSchema = new mongoose.Schema({
     ref: "Team",
     required: true,
   },
-  homeGoals: { type: Number, default: 0 },
-  awayGoals: { type: Number, default: 0 },
-  referee: { type: String },
-  date: { type: Date, default: Date.now },
+  homeGoals: {
+    type: Number,
+    default: 0,
+  },
+  awayGoals: {
+    type: Number,
+    default: 0,
+  },
+  referee: {
+    type: String,
+    default: "",
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-export default mongoose.model("Match", matchSchema);
+const Match = mongoose.model("Match", MatchSchema);
+export default Match;
+
 
 
 

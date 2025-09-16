@@ -62,9 +62,6 @@ const Navbar = () => {
             <Link to="/standings" className="text-white hover:text-gray-200">
               Posiciones
             </Link>
-            <Link to="/stats" className="text-white hover:text-gray-200">
-              Estadísticas
-            </Link>
           </div>
         </div>
       </div>
@@ -77,7 +74,6 @@ const Navbar = () => {
             <Link to="/matches" className="text-white" onClick={() => setMenuOpen(false)}>Partidos</Link>
             <Link to="/tournaments" className="text-white" onClick={() => setMenuOpen(false)}>Torneos</Link>
             <Link to="/standings" className="text-white" onClick={() => setMenuOpen(false)}>Posiciones</Link>
-            <Link to="/stats" className="text-white" onClick={() => setMenuOpen(false)}>Estadísticas</Link>
           </div>
         </div>
       )}

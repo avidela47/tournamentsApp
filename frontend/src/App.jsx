@@ -8,7 +8,6 @@ import PlayerPage from "./pages/PlayerPage.jsx";
 import MatchPage from "./pages/MatchPage.jsx";
 import TournamentPage from "./pages/TournamentPage.jsx";
 import StandingsPage from "./pages/StandingsPage.jsx";
-import StatsPage from "./pages/StatsPage.jsx";
 
 function App() {
   return (
@@ -22,7 +21,6 @@ function App() {
           <Route path="/matches" element={<MatchPage />} />
           <Route path="/tournaments" element={<TournamentPage />} />
           <Route path="/standings" element={<StandingsPage />} />
-          <Route path="/stats" element={<StatsPage />} />
         </Routes>
       </div>
     </Router>

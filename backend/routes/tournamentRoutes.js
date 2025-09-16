@@ -4,7 +4,7 @@ import Tournament from "../models/Tournament.js";
 const router = express.Router();
 
 // ============================
-// Listar torneos
+// Obtener todos los torneos
 // ============================
 router.get("/", async (req, res) => {
   try {
@@ -16,17 +16,30 @@ router.get("/", async (req, res) => {
 });
 
 // ============================
+// Obtener torneo por ID
+// ============================
+router.get("/:id", async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) return res.status(404).json({ message: "Torneo no encontrado" });
+    res.json(tournament);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ============================
 // Crear torneo
 // ============================
 router.post("/", async (req, res) => {
   try {
-    const { name, logo, totalRounds, totalTeams } = req.body;
+    const { name, logo, fechas, teamsCount } = req.body;
 
     const tournament = new Tournament({
       name,
       logo,
-      totalRounds,
-      totalTeams,
+      fechas,
+      teamsCount,
     });
 
     const saved = await tournament.save();
@@ -41,11 +54,11 @@ router.post("/", async (req, res) => {
 // ============================
 router.put("/:id", async (req, res) => {
   try {
-    const { name, logo, totalRounds, totalTeams } = req.body;
+    const { name, logo, fechas, teamsCount } = req.body;
 
     const updated = await Tournament.findByIdAndUpdate(
       req.params.id,
-      { name, logo, totalRounds, totalTeams },
+      { name, logo, fechas, teamsCount },
       { new: true }
     );
 
@@ -71,3 +84,4 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
+

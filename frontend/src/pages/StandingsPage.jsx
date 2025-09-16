@@ -1,170 +1,253 @@
-import React, { useEffect, useMemo, useState } from "react";
-import StandingsTable from "../components/StandingsTable";
+import React, { useState, useEffect } from "react";
 
 const StandingsPage = () => {
   const [tournaments, setTournaments] = useState([]);
-  const [selectedTournament, setSelectedTournament] = useState("");
   const [standings, setStandings] = useState([]);
-  const [cardsSummary, setCardsSummary] = useState({ yellow: 0, red: 0 });
-  const [loading, setLoading] = useState(false);
+  const [players, setPlayers] = useState([]);
+  const [selectedTournament, setSelectedTournament] = useState("");
 
-  // -------------------------
-  // 🔹 Fetch helper
-  // -------------------------
   const fetchJSON = async (url) => {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
     return res.json();
   };
 
-  // -------------------------
-  // 🔹 Cargar torneos
-  // -------------------------
   useEffect(() => {
-    (async () => {
-      try {
-        // ⚠️ Usa la ruta que tengas en tu backend: 
-        // si en tu server.js pusiste app.use("/api/tournaments", tournamentRoutes),
-        // entonces esta URL es correcta.
-        const data = await fetchJSON("http://localhost:5000/api/tournaments");
-        setTournaments(data || []);
-
-        if (data?.length) {
-          setSelectedTournament(data[0]._id || data[0].id);
-        }
-      } catch (e) {
-        console.error("Error cargando torneos:", e);
-      }
-    })();
+    const loadTournaments = async () => {
+      const data = await fetchJSON("http://localhost:5000/api/tournaments");
+      setTournaments(data);
+    };
+    loadTournaments();
   }, []);
 
-  // -------------------------
-  // 🔹 Cargar standings + tarjetas
-  // -------------------------
-  useEffect(() => {
-    if (!selectedTournament) return;
+  const loadStandings = async (tournamentId) => {
+    const data = await fetchJSON(
+      `http://localhost:5000/api/standings/${tournamentId}`
+    );
+    setStandings(data);
+  };
 
-    (async () => {
-      setLoading(true);
-      try {
-        const tabla = await fetchJSON(
-          `http://localhost:5000/api/standings/${selectedTournament}`
-        );
+  const loadPlayers = async (tournamentId) => {
+    const data = await fetchJSON(
+      `http://localhost:5000/api/players/tournament/${tournamentId}`
+    );
+    setPlayers(data);
+  };
 
-        const normalizados =
-          (tabla || []).map((t) => ({
-            teamId: t.teamId || t.team?._id || t._id || t.id,
-            team: t.team?.name || t.name || "Equipo",
-            logo: t.team?.logo || t.logo || "",
-            played: t.played ?? 0,
-            wins: t.wins ?? 0,
-            draws: t.draws ?? 0,
-            losses: t.losses ?? 0,
-            goalsFor: t.goalsFor ?? 0,
-            goalsAgainst: t.goalsAgainst ?? 0,
-            goalDiff: (t.goalsFor ?? 0) - (t.goalsAgainst ?? 0),
-            points: t.points ?? 0,
-          })) ?? [];
+  const handleTournamentChange = (e) => {
+    const id = e.target.value;
+    setSelectedTournament(id);
+    if (id) {
+      loadStandings(id);
+      loadPlayers(id);
+    } else {
+      setStandings([]);
+      setPlayers([]);
+    }
+  };
 
-        normalizados.sort((a, b) => {
-          if (b.points !== a.points) return b.points - a.points;
-          if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-          return (b.goalsFor || 0) - (a.goalsFor || 0);
-        });
+  // ➤ Top 5 goleadores
+  const topScorers = [...players]
+    .filter((p) => p.goals && p.goals > 0)
+    .sort((a, b) => b.goals - a.goals)
+    .slice(0, 5);
 
-        setStandings(normalizados);
+  // ➤ Amarillas
+  const yellowCards = [...players]
+    .filter((p) => p.yellowCards && p.yellowCards > 0)
+    .sort((a, b) => b.yellowCards - a.yellowCards);
 
-        // Tarjetas
-        const stats = await fetchJSON(
-          `http://localhost:5000/api/stats?tournamentId=${selectedTournament}`
-        );
-        const yellow =
-          stats?.filter((s) => s.type === "yellow" || s.card === "yellow")
-            ?.length || 0;
-        const red =
-          stats?.filter((s) => s.type === "red" || s.card === "red")?.length ||
-          0;
-
-        setCardsSummary({ yellow, red });
-      } catch (e) {
-        console.error("Error cargando standings/stats:", e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [selectedTournament]);
-
-  const selectedName = useMemo(
-    () =>
-      tournaments.find((t) => (t._id || t.id) === selectedTournament)?.name ||
-      "",
-    [tournaments, selectedTournament]
-  );
+  // ➤ Rojas
+  const redCards = [...players]
+    .filter((p) => p.redCards && p.redCards > 0)
+    .sort((a, b) => b.redCards - a.redCards);
 
   return (
-    <div className="w-full">
-      {/* 🔹 Selector de torneo */}
-      <div className="w-full max-w-xl mx-auto mt-6 px-4">
+    <div className="w-full max-w-6xl mx-auto px-4 py-6 text-black">
+      {/* Seleccionar torneo */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-center mb-4">
+          Seleccionar Torneo
+        </h2>
         <select
           value={selectedTournament}
-          onChange={(e) => setSelectedTournament(e.target.value)}
-          className="w-full bg-white text-black border border-gray-300 rounded-xl px-4 py-3 shadow-sm outline-none"
+          onChange={handleTournamentChange}
+          className="border p-2 rounded w-full text-black"
         >
-          <option value="">Seleccionar torneo</option>
+          <option value="">-- Selecciona un torneo --</option>
           {tournaments.map((t) => (
-            <option key={t._id || t.id} value={t._id || t.id}>
+            <option key={t._id} value={t._id}>
               {t.name}
             </option>
           ))}
         </select>
       </div>
 
-      {/* 🔹 Card: Tabla de posiciones */}
-      <section className="w-full max-w-6xl mx-auto mt-8 px-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-black text-center mb-4">
+      {/* 📊 Tabla de posiciones */}
+      {standings.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-6">
             📊 Tabla de Posiciones
           </h2>
-
-          {loading ? (
-            <p className="text-center text-gray-600 py-6">Cargando…</p>
-          ) : (
-            <StandingsTable standings={standings} />
-          )}
+          <table className="w-full border-collapse border text-black">
+            <thead>
+              <tr className="bg-gray-200 text-black text-center">
+                <th className="p-2">Equipo</th>
+                <th className="p-2">PJ</th>
+                <th className="p-2">G</th>
+                <th className="p-2">E</th>
+                <th className="p-2">P</th>
+                <th className="p-2">GF</th>
+                <th className="p-2">GC</th>
+                <th className="p-2">DG</th>
+                <th className="p-2">Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.map((team, i) => (
+                <tr
+                  key={team._id}
+                  className={`text-center ${
+                    i === 0
+                      ? "bg-green-100"
+                      : i >= standings.length - 2
+                      ? "bg-red-100"
+                      : ""
+                  }`}
+                >
+                  <td className="flex items-center gap-2 p-2">
+                    <img
+                      src={team.logo || "/default-logo.png"}
+                      alt={team.team}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span>{team.team}</span>
+                  </td>
+                  <td className="p-2">{team.played}</td>
+                  <td className="p-2">{team.wins}</td>
+                  <td className="p-2">{team.draws}</td>
+                  <td className="p-2">{team.losses}</td>
+                  <td className="p-2">{team.goalsFor}</td>
+                  <td className="p-2">{team.goalsAgainst}</td>
+                  <td className="p-2">{team.goalDiff}</td>
+                  <td className="p-2 font-bold">{team.points}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </section>
+      )}
 
-      {/* 🔹 Card: Tarjetas */}
-      <section className="w-full max-w-4xl mx-auto mt-8 px-4 mb-10">
-        <div className="bg-white rounded-2xl shadow-xl p-5">
-          <h3 className="text-xl md:text-2xl font-extrabold text-black mb-3">
-            🟨🟥 Tarjetas del Torneo
-          </h3>
+      {/* Estadísticas del torneo */}
+      {selectedTournament && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Goleadores */}
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <h3 className="text-lg font-bold text-center mb-4">🥅 Goleadores</h3>
+            {topScorers.length === 0 ? (
+              <p className="text-gray-500 text-center">Sin datos</p>
+            ) : (
+              topScorers.map((p) => (
+                <div
+                  key={p._id}
+                  className="flex items-center gap-3 mb-2 border-b pb-2"
+                >
+                  <img
+                    src={p.photo || "/default-player.png"}
+                    alt={p.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{p.name}</p>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <img
+                        src={p.team?.logo || "/default-logo.png"}
+                        alt={p.team?.name}
+                        className="w-5 h-5 rounded-full"
+                      />
+                      {p.team?.name}
+                    </p>
+                  </div>
+                  <span className="font-bold">{p.goals}</span>
+                </div>
+              ))
+            )}
+          </div>
 
-          <div className="space-y-2 text-black">
-            <div className="flex items-center justify-between bg-yellow-50 rounded-lg px-4 py-2 ring-1 ring-yellow-100">
-              <span className="font-semibold">
-                Total jugadores con amarillas:
-              </span>
-              <span className="font-bold text-yellow-600">
-                {cardsSummary.yellow}
-              </span>
-            </div>
+          {/* Amarillas */}
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <h3 className="text-lg font-bold text-center mb-4">🟨 Amarillas</h3>
+            {yellowCards.length === 0 ? (
+              <p className="text-gray-500 text-center">Sin datos</p>
+            ) : (
+              yellowCards.map((p) => (
+                <div
+                  key={p._id}
+                  className="flex items-center gap-3 mb-2 border-b pb-2"
+                >
+                  <img
+                    src={p.photo || "/default-player.png"}
+                    alt={p.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{p.name}</p>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <img
+                        src={p.team?.logo || "/default-logo.png"}
+                        alt={p.team?.name}
+                        className="w-5 h-5 rounded-full"
+                      />
+                      {p.team?.name}
+                    </p>
+                  </div>
+                  <span className="font-bold">{p.yellowCards}</span>
+                </div>
+              ))
+            )}
+          </div>
 
-            <div className="flex items-center justify-between bg-red-50 rounded-lg px-4 py-2 ring-1 ring-red-100">
-              <span className="font-semibold">Total jugadores con rojas:</span>
-              <span className="font-bold text-red-600">
-                {cardsSummary.red}
-              </span>
-            </div>
+          {/* Rojas */}
+          <div className="bg-white rounded-xl shadow-lg p-4">
+            <h3 className="text-lg font-bold text-center mb-4">🟥 Rojas</h3>
+            {redCards.length === 0 ? (
+              <p className="text-gray-500 text-center">Sin datos</p>
+            ) : (
+              redCards.map((p) => (
+                <div
+                  key={p._id}
+                  className="flex items-center gap-3 mb-2 border-b pb-2"
+                >
+                  <img
+                    src={p.photo || "/default-player.png"}
+                    alt={p.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{p.name}</p>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <img
+                        src={p.team?.logo || "/default-logo.png"}
+                        alt={p.team?.name}
+                        className="w-5 h-5 rounded-full"
+                      />
+                      {p.team?.name}
+                    </p>
+                  </div>
+                  <span className="font-bold">{p.redCards}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
-      </section>
+      )}
     </div>
   );
 };
 
 export default StandingsPage;
+
+
 
 
 

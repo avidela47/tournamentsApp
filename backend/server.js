@@ -33,7 +33,7 @@ mongoose
   .catch((err) => console.error("❌ Error de conexión MongoDB:", err));
 
 // ============================
-// Rutas API
+// Rutas de la API
 // ============================
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/teams", teamRoutes);
@@ -41,8 +41,11 @@ app.use("/api/players", playerRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/standings", standingsRoutes);
 
+// Ruta de prueba para verificar backend
+app.get("/ping", (_req, res) => res.send("API funcionando 🚀"));
+
 // ============================
-// Servir frontend en producción
+// Servir frontend (después de API)
 // ============================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +60,6 @@ app.get("*", (req, res) => {
 // Levantar servidor
 // ============================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🔥 Servidor corriendo en Puerto:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🔥 Servidor corriendo en Puerto:${PORT}`);
+});

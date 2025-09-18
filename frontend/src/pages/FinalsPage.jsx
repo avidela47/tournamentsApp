@@ -223,45 +223,48 @@ const FinalsPage = () => {
           </div>
 
           {/* Final */}
-          <div className="flex flex-col items-center justify-center relative">
-            <h3 className="text-center font-bold mb-2 text-white">GRAN FINAL</h3>
-            {bracket.final?.[0] && (
-              <div className="match-card bracket-connector-final">
-                {/* Línea vertical izquierda */}
-                <div className="final-vertical-left"></div>
+<div className="flex flex-col items-center justify-center relative">
+  <h3 className="text-center font-bold mb-2 text-white">GRAN FINAL</h3>
+  {bracket.final?.[0] && (
+    <div className="match-card bracket-connector-final">
+      {/* Línea vertical izquierda */}
+      <div className="final-vertical-left"></div>
 
-                <MatchCard
-                  round="final"
-                  index={0}
-                  match={bracket.final[0]}
-                  final={true}
-                />
+      <MatchCard
+        round="final"
+        index={0}
+        match={bracket.final[0]}
+        final={true}
+      />
 
-                {/* Línea vertical derecha */}
-                <div className="final-vertical-right"></div>
-              </div>
-            )}
+      {/* Línea vertical derecha */}
+      <div className="final-vertical-right"></div>
+    </div>
+  )}
 
-            {champion && (
-              <div className="mt-6 bg-white shadow-lg rounded-lg p-4 flex flex-col items-center w-60">
-                <img
-                  src={champion.logo || "/default-logo.png"}
-                  alt={champion.name}
-                  className="w-20 h-20 rounded-full border object-cover mb-3"
-                />
-                <h4 className="font-bold text-lg text-yellow-600 text-center">
-                  🏆 CAMPEÓN
-                </h4>
-                <p className="text-black font-semibold">{champion.name}</p>
-                <img
-                  src="/trophy.png"
-                  alt="Trofeo"
-                  className="w-16 h-16 mt-3"
-                  onError={(e) => (e.target.style.display = "none")}
-                />
-              </div>
-            )}
-          </div>
+  {champion && (
+    <div className="mt-6 bg-white shadow-lg rounded-lg p-4 flex flex-col items-center w-60 relative">
+      <img
+        src={champion.logo || "/default-logo.png"}
+        alt={champion.name}
+        className="w-20 h-20 rounded-full border object-cover mb-3"
+      />
+      <h4 className="font-bold text-lg text-yellow-600 text-center">
+        🏆 CAMPEÓN
+      </h4>
+      <p className="text-black font-semibold">{champion.name}</p>
+      <img
+        src="/trophy.png"
+        alt="Trofeo"
+        className="w-16 h-16 mt-3"
+        onError={(e) => (e.target.style.display = "none")}
+      />
+
+      {/* unión central */}
+      <div className="champion-connector"></div>
+    </div>
+  )}
+</div>
 
           {/* Lado B */}
           <div className="flex flex-col gap-10 items-center">

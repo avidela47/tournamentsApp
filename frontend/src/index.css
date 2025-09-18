@@ -81,13 +81,13 @@ body {
   right: -60px; /* conecta desde la semi derecha */
 }
 
-/* verticales de la final */
+/* verticales de la final (bajan hasta campeón) */
 .match-card.bracket-connector-final .final-vertical-left,
 .match-card.bracket-connector-final .final-vertical-right {
   position: absolute;
   top: 50%;
   width: 2px;
-  height: 60px; /* largo hacia abajo, ajustá a tu gusto */
+  height: 120px; /* largo hacia abajo: ajustá según espacio */
   background: white;
 }
 .match-card.bracket-connector-final .final-vertical-left {
@@ -95,5 +95,21 @@ body {
 }
 .match-card.bracket-connector-final .final-vertical-right {
   right: -60px;
+}
+
+/* unión centrada debajo del campeón */
+.champion-connector {
+  position: relative;
+  margin-top: 10px;
+}
+.champion-connector::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px; /* une las dos líneas verticales */
+  height: 2px;
+  background: white;
 }
 

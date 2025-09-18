@@ -2,8 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const HomePage = () => {
-
-  // 🌍 API Render o Local (por ahora no se usa aquí)
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
   
   const menuItems = [
@@ -12,7 +10,7 @@ const HomePage = () => {
     { path: "/matches", label: "Partidos", icon: "🥅", color: "bg-blue-100" },
     { path: "/tournaments", label: "Torneos", icon: "🏆", color: "bg-purple-100" },
     { path: "/standings", label: "Posiciones", icon: "📊", color: "bg-orange-100" },
-    { path: "/", label: "Estadísticas", icon: "📈", color: "bg-pink-100" },
+    { path: "/finals", label: "Ronda Final", icon: "🎯", color: "bg-pink-100" }, // ⬅️ cambiado
   ];
 
   return (
@@ -21,7 +19,7 @@ const HomePage = () => {
         Bienvenido a <span className="text-blue-600">Tournaments App</span>
       </h1>
       <p className="text-lg mb-8 text-gray-700 text-center max-w-xl">
-        Administra tus equipos, jugadores, partidos, torneos, posiciones y estadísticas.
+        Administra tus equipos, jugadores, partidos, torneos, posiciones y rondas finales.
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 w-full max-w-3xl">
@@ -43,7 +41,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-
-
-
-

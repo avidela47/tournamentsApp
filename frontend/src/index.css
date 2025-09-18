@@ -3,3 +3,50 @@
 @tailwind components;
 @tailwind utilities;
 body { @apply text-white; background-image: url('https://www.shutterstock.com/image-illustration/3d-render-open-air-football-600nw-2472453001.jpg'); background-size: cover; background-position: center; background-attachment: fixed; }
+/* === Bracket doble árbol estilo Libertadores === */
+
+/* Conectores lado A (derecha) */
+.bracket-connector-right {
+  position: relative;
+}
+.bracket-connector-right::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 40px;
+  height: 2px;
+  background: #4b5563;
+}
+.bracket-connector-right-strong::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 60px;
+  height: 2px;
+  background: #1f2937;
+}
+
+/* Conectores lado B (izquierda) */
+.bracket-connector-left {
+  position: relative;
+}
+.bracket-connector-left::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 40px;
+  height: 2px;
+  background: #4b5563;
+}
+.bracket-connector-left-strong::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 60px;
+  height: 2px;
+  background: #1f2937;
+}

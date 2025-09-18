@@ -8,6 +8,7 @@ import PlayerPage from "./pages/PlayerPage.jsx";
 import MatchPage from "./pages/MatchPage.jsx";
 import TournamentPage from "./pages/TournamentPage.jsx";
 import StandingsPage from "./pages/StandingsPage.jsx";
+import FinalsPage from "./pages/FinalsPage.jsx"; // ⬅️ agregado
 
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
@@ -72,6 +73,14 @@ function App() {
               element={
                 <Protected>
                   <StandingsPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="/finals"
+              element={
+                <Protected>
+                  <FinalsPage />
                 </Protected>
               }
             />

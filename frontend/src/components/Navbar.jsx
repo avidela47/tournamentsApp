@@ -25,7 +25,7 @@ const Navbar = () => {
           className="md:hidden flex items-center px-3 py-2 border rounded text-white border-white hover:bg-blue-700"
           onClick={() => setMenuOpen(!menuOpen)}
         >
-          ☰
+          {menuOpen ? "✖" : "☰"}
         </button>
 
         {/* Menú principal */}
@@ -39,45 +39,52 @@ const Navbar = () => {
               <>
                 <Link
                   to="/"
-                  className="hover:underline py-2 px-2 text-center"
+                  className="hover:underline py-2 px-2 text-center flex items-center gap-1"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Inicio
+                  🏠 Inicio
                 </Link>
                 <Link
                   to="/teams"
-                  className="hover:underline py-2 px-2 text-center"
+                  className="hover:underline py-2 px-2 text-center flex items-center gap-1"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Equipos
+                  ⚽ Equipos
                 </Link>
                 <Link
                   to="/players"
-                  className="hover:underline py-2 px-2 text-center"
+                  className="hover:underline py-2 px-2 text-center flex items-center gap-1"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Jugadores
+                  👟 Jugadores
                 </Link>
                 <Link
                   to="/matches"
-                  className="hover:underline py-2 px-2 text-center"
+                  className="hover:underline py-2 px-2 text-center flex items-center gap-1"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Partidos
+                  🥅 Partidos
                 </Link>
                 <Link
                   to="/tournaments"
-                  className="hover:underline py-2 px-2 text-center"
+                  className="hover:underline py-2 px-2 text-center flex items-center gap-1"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Torneos
+                  🏟️ Torneos
                 </Link>
                 <Link
                   to="/standings"
-                  className="hover:underline py-2 px-2 text-center"
+                  className="hover:underline py-2 px-2 text-center flex items-center gap-1"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Tabla
+                  📊 Tabla
+                </Link>
+                <Link
+                  to="/finals"
+                  className="hover:underline py-2 px-2 text-center flex items-center gap-1"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  🏆 Ronda Final
                 </Link>
 
                 {/* Botón Logout */}
@@ -114,3 +121,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+

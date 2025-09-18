@@ -13,6 +13,7 @@ import playerRoutes from "./routes/playerRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import standingsRoutes from "./routes/standingsRoutes.js";
 import authRoutes from "./routes/auth.routes.js";
+import finalsRoutes from "./routes/finals.js";
 
 dotenv.config();
 const app = express();
@@ -44,6 +45,7 @@ app.use("/api/teams", teamRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/standings", standingsRoutes);
+app.use("/api/finals", finalsRoutes);
 
 // Ruta de prueba para verificar backend
 app.get("/ping", (_req, res) => res.send("API funcionando 🚀"));

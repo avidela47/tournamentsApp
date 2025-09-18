@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext.jsx"; // ⬅️ usamos auth
 
 const StandingsPage = () => {
+  const { auth } = useAuth(); // lo dejamos por si querés usar más adelante
+
   const [tournaments, setTournaments] = useState([]);
   const [standings, setStandings] = useState([]);
   const [players, setPlayers] = useState([]);
   const [selectedTournament, setSelectedTournament] = useState("");
 
-  // 🌍 Detectar API (Render o Local)
-  const API_URL =
-    import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-  const fetchJSON = async (url) => {
-    const res = await fetch(url);
+  const fetchJSON = async (url, options = {}) => {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth?.token}`,
+        ...options.headers,
+      },
+    });
     if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
     return res.json();
   };
@@ -52,12 +60,10 @@ const StandingsPage = () => {
     .sort((a, b) => b.goals - a.goals)
     .slice(0, 5);
 
-  // ➤ Amarillas
   const yellowCards = [...players]
     .filter((p) => p.yellowCards && p.yellowCards > 0)
     .sort((a, b) => b.yellowCards - a.yellowCards);
 
-  // ➤ Rojas
   const redCards = [...players]
     .filter((p) => p.redCards && p.redCards > 0)
     .sort((a, b) => b.redCards - a.redCards);
@@ -66,9 +72,7 @@ const StandingsPage = () => {
     <div className="w-full max-w-6xl mx-auto px-4 py-6 text-black">
       {/* Seleccionar torneo */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-bold text-center mb-4">
-          Seleccionar Torneo
-        </h2>
+        <h2 className="text-xl font-bold text-center mb-4">Seleccionar Torneo</h2>
         <select
           value={selectedTournament}
           onChange={handleTournamentChange}
@@ -246,3 +250,6 @@ const StandingsPage = () => {
 };
 
 export default StandingsPage;
+
+
+

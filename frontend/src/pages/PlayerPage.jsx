@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext.jsx"; // ⬅️ importamos el contexto
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const PlayerPage = () => {
+  const { auth } = useAuth();              // ⬅️ usamos auth del contexto
+  const isAdmin = auth?.role === "admin";  // ⬅️ check de rol
+
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [tournaments, setTournaments] = useState([]);
@@ -19,12 +23,25 @@ const PlayerPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [updatingStats, setUpdatingStats] = useState({});
 
+  // ============================
+  // Fetch Helper con Token
+  // ============================
   const fetchJSON = async (url, options = {}) => {
-    const res = await fetch(url, options);
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth?.token}`, // ⬅️ añadimos token
+        ...options.headers,
+      },
+    });
     if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
     return res.json();
   };
 
+  // ============================
+  // Cargar datos
+  // ============================
   const loadPlayers = async () => {
     const data = await fetchJSON(`${API_URL}/players`);
     setPlayers(data || []);
@@ -46,18 +63,19 @@ const PlayerPage = () => {
     loadTournaments();
   }, []);
 
+  // ============================
+  // Crear / Editar jugador
+  // ============================
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editingId) {
       await fetchJSON(`${API_URL}/players/${editingId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     } else {
       await fetchJSON(`${API_URL}/players`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     }
@@ -90,9 +108,7 @@ const PlayerPage = () => {
   };
 
   const handleDelete = async (id) => {
-    await fetchJSON(`${API_URL}/players/${id}`, {
-      method: "DELETE",
-    });
+    await fetchJSON(`${API_URL}/players/${id}`, { method: "DELETE" });
     await loadPlayers();
   };
 
@@ -101,12 +117,14 @@ const PlayerPage = () => {
     if (!stats) return;
     await fetchJSON(`${API_URL}/players/${id}/stats`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(stats),
     });
     await loadPlayers();
   };
 
+  // ============================
+  // Agrupar jugadores por torneo/equipo
+  // ============================
   const groupedByTournament = tournaments.map((tournament) => ({
     ...tournament,
     teams: teams
@@ -121,75 +139,77 @@ const PlayerPage = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-6 text-black">
-      {/* Formulario */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-bold text-center mb-4">
-          ➕ {editingId ? "Editar Jugador" : "Crear Jugador"}
-        </h2>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-        >
-          <input
-            type="text"
-            placeholder="Nombre del Jugador"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="border p-2 rounded text-black"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Posición"
-            value={form.position}
-            onChange={(e) => setForm({ ...form, position: e.target.value })}
-            className="border p-2 rounded text-black"
-          />
-          <input
-            type="text"
-            placeholder="URL Foto"
-            value={form.photo}
-            onChange={(e) => setForm({ ...form, photo: e.target.value })}
-            className="border p-2 rounded text-black"
-          />
-          <select
-            value={form.tournament}
-            onChange={(e) => setForm({ ...form, tournament: e.target.value })}
-            className="border p-2 rounded text-black"
-            required
+      {/* 📌 Formulario: solo admin */}
+      {isAdmin && (
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-center mb-4">
+            ➕ {editingId ? "Editar Jugador" : "Crear Jugador"}
+          </h2>
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
-            <option value="">Seleccionar Torneo</option>
-            {tournaments.map((t) => (
-              <option key={t._id} value={t._id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={form.team}
-            onChange={(e) => setForm({ ...form, team: e.target.value })}
-            className="border p-2 rounded text-black"
-            required
-          >
-            <option value="">Seleccionar Equipo</option>
-            {teams
-              .filter((team) => String(team.tournament?._id) === form.tournament)
-              .map((t) => (
+            <input
+              type="text"
+              placeholder="Nombre del Jugador"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="border p-2 rounded text-black"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Posición"
+              value={form.position}
+              onChange={(e) => setForm({ ...form, position: e.target.value })}
+              className="border p-2 rounded text-black"
+            />
+            <input
+              type="text"
+              placeholder="URL Foto"
+              value={form.photo}
+              onChange={(e) => setForm({ ...form, photo: e.target.value })}
+              className="border p-2 rounded text-black"
+            />
+            <select
+              value={form.tournament}
+              onChange={(e) => setForm({ ...form, tournament: e.target.value })}
+              className="border p-2 rounded text-black"
+              required
+            >
+              <option value="">Seleccionar Torneo</option>
+              {tournaments.map((t) => (
                 <option key={t._id} value={t._id}>
                   {t.name}
                 </option>
               ))}
-          </select>
-          <button
-            type="submit"
-            className="col-span-1 md:col-span-2 lg:col-span-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-          >
-            {editingId ? "Actualizar" : "Guardar"}
-          </button>
-        </form>
-      </div>
+            </select>
+            <select
+              value={form.team}
+              onChange={(e) => setForm({ ...form, team: e.target.value })}
+              className="border p-2 rounded text-black"
+              required
+            >
+              <option value="">Seleccionar Equipo</option>
+              {teams
+                .filter((team) => String(team.tournament?._id) === form.tournament)
+                .map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name}
+                  </option>
+                ))}
+            </select>
+            <button
+              type="submit"
+              className="col-span-1 md:col-span-2 lg:col-span-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            >
+              {editingId ? "Actualizar" : "Guardar"}
+            </button>
+          </form>
+        </div>
+      )}
 
-      {/* Lista agrupada */}
+      {/* 📌 Lista agrupada */}
       <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-6">
         🧑‍🤝‍🧑 Lista de Jugadores
       </h2>
@@ -235,9 +255,7 @@ const PlayerPage = () => {
                         className="w-14 h-14 rounded-full object-cover border mb-2"
                       />
                       <h4 className="text-base font-bold">{player.name}</h4>
-                      <p className="text-xs text-gray-600">
-                        {player.position}
-                      </p>
+                      <p className="text-xs text-gray-600">{player.position}</p>
                       <p className="text-xs mt-1">
                         Equipo: {player.team?.name}
                       </p>
@@ -245,81 +263,86 @@ const PlayerPage = () => {
                         Torneo: {player.team?.tournament?.name}
                       </p>
 
-                      {/* Stats rápidas */}
-                      <div className="mt-2 w-full">
-                        <div className="flex justify-between text-xs mb-1">
-                          <label>⚽</label>
-                          <input
-                            type="number"
-                            defaultValue={player.goals}
-                            onChange={(e) =>
-                              setUpdatingStats((prev) => ({
-                                ...prev,
-                                [player._id]: {
-                                  ...prev[player._id],
-                                  goals: Number(e.target.value),
-                                },
-                              }))
-                            }
-                            className="w-12 border rounded p-1 text-black text-xs"
-                          />
+                      {/* 📌 Stats rápidas: solo admin */}
+                      {isAdmin && (
+                        <div className="mt-2 w-full">
+                          <div className="flex justify-between text-xs mb-1">
+                            <label>⚽</label>
+                            <input
+                              type="number"
+                              defaultValue={player.goals}
+                              onChange={(e) =>
+                                setUpdatingStats((prev) => ({
+                                  ...prev,
+                                  [player._id]: {
+                                    ...prev[player._id],
+                                    goals: Number(e.target.value),
+                                  },
+                                }))
+                              }
+                              className="w-12 border rounded p-1 text-black text-xs"
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <label className="text-yellow-600">🟨</label>
+                            <input
+                              type="number"
+                              defaultValue={player.yellowCards}
+                              onChange={(e) =>
+                                setUpdatingStats((prev) => ({
+                                  ...prev,
+                                  [player._id]: {
+                                    ...prev[player._id],
+                                    yellowCards: Number(e.target.value),
+                                  },
+                                }))
+                              }
+                              className="w-12 border rounded p-1 text-black text-xs"
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <label className="text-red-600">🟥</label>
+                            <input
+                              type="number"
+                              defaultValue={player.redCards}
+                              onChange={(e) =>
+                                setUpdatingStats((prev) => ({
+                                  ...prev,
+                                  [player._id]: {
+                                    ...prev[player._id],
+                                    redCards: Number(e.target.value),
+                                  },
+                                }))
+                              }
+                              className="w-12 border rounded p-1 text-black text-xs"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleUpdateStats(player._id)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs w-full"
+                          >
+                            Guardar Stats
+                          </button>
                         </div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <label className="text-yellow-600">🟨</label>
-                          <input
-                            type="number"
-                            defaultValue={player.yellowCards}
-                            onChange={(e) =>
-                              setUpdatingStats((prev) => ({
-                                ...prev,
-                                [player._id]: {
-                                  ...prev[player._id],
-                                  yellowCards: Number(e.target.value),
-                                },
-                              }))
-                            }
-                            className="w-12 border rounded p-1 text-black text-xs"
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <label className="text-red-600">🟥</label>
-                          <input
-                            type="number"
-                            defaultValue={player.redCards}
-                            onChange={(e) =>
-                              setUpdatingStats((prev) => ({
-                                ...prev,
-                                [player._id]: {
-                                  ...prev[player._id],
-                                  redCards: Number(e.target.value),
-                                },
-                              }))
-                            }
-                            className="w-12 border rounded p-1 text-black text-xs"
-                          />
-                        </div>
-                        <button
-                          onClick={() => handleUpdateStats(player._id)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs w-full"
-                        >
-                          Guardar Stats
-                        </button>
-                      </div>
+                      )}
 
-                      <div className="flex gap-1 mt-2">
-                        <button
-                          onClick={() => handleEdit(player)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1 rounded text-xs"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(player._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
+                      {/* 📌 Botones de acción: solo admin */}
+                      {isAdmin && (
+                        <div className="flex gap-1 mt-2">
+                          <button
+                            onClick={() => handleEdit(player)}
+                            className="bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1 rounded text-xs"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(player._id)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -333,3 +356,5 @@ const PlayerPage = () => {
 };
 
 export default PlayerPage;
+
+

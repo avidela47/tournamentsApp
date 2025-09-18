@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import morgan from "morgan";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
@@ -11,6 +12,7 @@ import teamRoutes from "./routes/teamRoutes.js";
 import playerRoutes from "./routes/playerRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import standingsRoutes from "./routes/standingsRoutes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 dotenv.config();
 const app = express();
@@ -18,8 +20,9 @@ const app = express();
 // ============================
 // Middlewares
 // ============================
-app.use(cors());
+app.use(cors({ origin: process.env.CLIENT_URL?.split(",") || "*", credentials: true }));
 app.use(express.json());
+app.use(morgan("dev"));
 
 // ============================
 // Conexión a MongoDB
@@ -35,6 +38,7 @@ mongoose
 // ============================
 // Rutas de la API
 // ============================
+app.use("/api/auth", authRoutes);
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/players", playerRoutes);

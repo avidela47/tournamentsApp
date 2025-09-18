@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext.jsx"; // ⬅️ usamos auth
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const TournamentPage = () => {
+  const { auth } = useAuth();                // ⬅️ usamos auth
+  const isAdmin = auth?.role === "admin";    // ⬅️ verificamos rol
+
   const [tournaments, setTournaments] = useState([]);
   const [form, setForm] = useState({
     name: "",
@@ -13,10 +17,17 @@ const TournamentPage = () => {
   const [editingId, setEditingId] = useState(null);
 
   // ============================
-  // Fetch Helper
+  // Fetch Helper con token
   // ============================
   const fetchJSON = async (url, options = {}) => {
-    const res = await fetch(url, options);
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth?.token}`, // ⬅️ token agregado
+        ...options.headers,
+      },
+    });
     if (!res.ok) throw new Error(`Error ${res.status} en ${url}`);
     return res.json();
   };
@@ -34,7 +45,7 @@ const TournamentPage = () => {
   }, []);
 
   // ============================
-  // Crear / Actualizar Torneo
+  // Crear / Actualizar Torneo (solo admin)
   // ============================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,13 +53,11 @@ const TournamentPage = () => {
     if (editingId) {
       await fetchJSON(`${API_URL}/tournaments/${editingId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     } else {
       await fetchJSON(`${API_URL}/tournaments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     }
@@ -59,7 +68,7 @@ const TournamentPage = () => {
   };
 
   // ============================
-  // Editar Torneo
+  // Editar Torneo (solo admin)
   // ============================
   const handleEdit = (tournament) => {
     setForm({
@@ -72,7 +81,7 @@ const TournamentPage = () => {
   };
 
   // ============================
-  // Eliminar Torneo
+  // Eliminar Torneo (solo admin)
   // ============================
   const handleDelete = async (id) => {
     await fetchJSON(`${API_URL}/tournaments/${id}`, {
@@ -86,53 +95,55 @@ const TournamentPage = () => {
       {/* =======================
           📌 FORMULARIO TORNEO
       ======================= */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-bold text-center mb-4">
-          ➕ {editingId ? "Editar Torneo" : "Crear Torneo"}
-        </h2>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          <input
-            type="text"
-            placeholder="Nombre del Torneo"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="border p-2 rounded text-black"
-            required
-          />
-          <input
-            type="text"
-            placeholder="URL del Logo"
-            value={form.logo}
-            onChange={(e) => setForm({ ...form, logo: e.target.value })}
-            className="border p-2 rounded text-black"
-          />
-          <input
-            type="number"
-            placeholder="Cantidad de Fechas"
-            value={form.totalRounds}
-            onChange={(e) => setForm({ ...form, totalRounds: e.target.value })}
-            className="border p-2 rounded text-black"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Cantidad de Equipos"
-            value={form.totalTeams}
-            onChange={(e) => setForm({ ...form, totalTeams: e.target.value })}
-            className="border p-2 rounded text-black"
-            required
-          />
-          <button
-            type="submit"
-            className="col-span-1 md:col-span-2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+      {isAdmin && (
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-center mb-4">
+            ➕ {editingId ? "Editar Torneo" : "Crear Torneo"}
+          </h2>
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            {editingId ? "Actualizar" : "Guardar"}
-          </button>
-        </form>
-      </div>
+            <input
+              type="text"
+              placeholder="Nombre del Torneo"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="border p-2 rounded text-black"
+              required
+            />
+            <input
+              type="text"
+              placeholder="URL del Logo"
+              value={form.logo}
+              onChange={(e) => setForm({ ...form, logo: e.target.value })}
+              className="border p-2 rounded text-black"
+            />
+            <input
+              type="number"
+              placeholder="Cantidad de Fechas"
+              value={form.totalRounds}
+              onChange={(e) => setForm({ ...form, totalRounds: e.target.value })}
+              className="border p-2 rounded text-black"
+              required
+            />
+            <input
+              type="number"
+              placeholder="Cantidad de Equipos"
+              value={form.totalTeams}
+              onChange={(e) => setForm({ ...form, totalTeams: e.target.value })}
+              className="border p-2 rounded text-black"
+              required
+            />
+            <button
+              type="submit"
+              className="col-span-1 md:col-span-2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            >
+              {editingId ? "Actualizar" : "Guardar"}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* =======================
           📌 LISTADO TORNEOS
@@ -158,20 +169,22 @@ const TournamentPage = () => {
             <p className="text-sm text-gray-600 mb-4">
               Equipos: {tournament.totalTeams}
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(tournament)}
-                className="bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-1 rounded-lg font-bold"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => handleDelete(tournament._id)}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg font-bold"
-              >
-                Eliminar
-              </button>
-            </div>
+            {isAdmin && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEdit(tournament)}
+                  className="bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-1 rounded-lg font-bold"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(tournament._id)}
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg font-bold"
+                >
+                  Eliminar
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -180,7 +193,4 @@ const TournamentPage = () => {
 };
 
 export default TournamentPage;
-
-
-
 

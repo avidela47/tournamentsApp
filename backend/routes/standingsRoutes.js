@@ -1,21 +1,23 @@
 import express from "express";
 import Match from "../models/Match.js";
 import Team from "../models/Team.js";
+import { verifyToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.get("/:tournamentId", async (req, res) => {
+// Tabla de posiciones por torneo (logueados)
+router.get("/:tournamentId", verifyToken, async (req, res) => {
   try {
     const { tournamentId } = req.params;
 
-    // Buscar equipos del torneo
+    // Equipos del torneo
     const teams = await Team.find({ tournament: tournamentId });
 
-    // Inicializar tabla
-    const standings = teams.map((team) => ({
-      _id: team._id,
-      team: team.name,
-      logo: team.logo,
+    // Inicializar
+    const standings = teams.map((t) => ({
+      _id: t._id,
+      name: t.name,
+      logo: t.logo,
       played: 0,
       wins: 0,
       draws: 0,
@@ -26,56 +28,39 @@ router.get("/:tournamentId", async (req, res) => {
       points: 0,
     }));
 
-    // Traer partidos del torneo
+    // Partidos del torneo
     const matches = await Match.find({ tournament: tournamentId })
       .populate("homeTeam")
       .populate("awayTeam");
 
-    // Actualizar estadísticas
-    matches.forEach((match) => {
-      const home = standings.find((t) => String(t._id) === String(match.homeTeam._id));
-      const away = standings.find((t) => String(t._id) === String(match.awayTeam._id));
+    // Calcular
+    matches.forEach((m) => {
+      const home = standings.find((x) => String(x._id) === String(m.homeTeam._id));
+      const away = standings.find((x) => String(x._id) === String(m.awayTeam._id));
+      if (!home || !away) return;
 
-      if (home && away) {
-        home.played++;
-        away.played++;
+      home.played++; away.played++;
+      home.goalsFor += m.homeGoals; home.goalsAgainst += m.awayGoals;
+      away.goalsFor += m.awayGoals; away.goalsAgainst += m.homeGoals;
 
-        home.goalsFor += match.homeGoals;
-        home.goalsAgainst += match.awayGoals;
-
-        away.goalsFor += match.awayGoals;
-        away.goalsAgainst += match.homeGoals;
-
-        if (match.homeGoals > match.awayGoals) {
-          home.wins++;
-          away.losses++;
-          home.points += 3;
-        } else if (match.homeGoals < match.awayGoals) {
-          away.wins++;
-          home.losses++;
-          away.points += 3;
-        } else {
-          home.draws++;
-          away.draws++;
-          home.points++;
-          away.points++;
-        }
-
-        home.goalDiff = home.goalsFor - home.goalsAgainst;
-        away.goalDiff = away.goalsFor - away.goalsAgainst;
-      }
+      if (m.homeGoals > m.awayGoals) { home.wins++; away.losses++; home.points += 3; }
+      else if (m.homeGoals < m.awayGoals) { away.wins++; home.losses++; away.points += 3; }
+      else { home.draws++; away.draws++; home.points += 1; away.points += 1; }
     });
 
-    // Ordenar por puntos
-    standings.sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff);
+    standings.forEach((s) => (s.goalDiff = s.goalsFor - s.goalsAgainst));
+
+    // Ordenar
+    standings.sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff || b.goalsFor - a.goalsFor);
 
     res.json(standings);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Error al calcular la tabla", error: err.message });
   }
 });
 
 export default router;
+
 
 
 

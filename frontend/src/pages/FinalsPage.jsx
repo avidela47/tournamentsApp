@@ -101,8 +101,8 @@ const FinalsPage = () => {
         alt={team?.name || "Equipo"}
         className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border object-cover mb-1"
       />
-      <span className="text-xs sm:text-sm font-semibold text-center">
-        {team?.name || "Equipo"}
+      <span className="text-xs sm:text-sm font-semibold text-center text-black">
+        {team?.name || "EQUIPO"}
       </span>
       {editable ? (
         <input
@@ -112,46 +112,61 @@ const FinalsPage = () => {
           onChange={(e) => onChange(Number(e.target.value))}
         />
       ) : (
-        <span className="font-bold">{goals}</span>
+        <span className="font-bold text-black">{goals}</span>
       )}
     </div>
   );
 
-  const MatchCard = ({ round, index, match }) => {
+  const MatchCard = ({ round, index, match, side, final = false }) => {
     if (!match?.home || !match?.away) return null;
     const [hg, ag] = match.score || [0, 0];
 
     return (
-      <div className="bg-white shadow rounded-lg p-2 sm:p-3 flex flex-col items-center min-w-[150px]">
-        <div className="flex items-center justify-between w-full">
-          <TeamCell
-            team={match.home}
-            goals={hg}
-            editable={isAdmin}
-            onChange={(val) => updateMatch(round, index, val, ag)}
-          />
-          <span className="font-bold text-gray-700 text-xs sm:text-base px-2">
-            VS
-          </span>
-          <TeamCell
-            team={match.away}
-            goals={ag}
-            editable={isAdmin}
-            onChange={(val) => updateMatch(round, index, hg, val)}
-          />
+      <div
+        className={`match-card relative ${
+          final
+            ? "bracket-connector-final"
+            : side === "left"
+            ? "bracket-connector-right"
+            : "bracket-connector-left"
+        }`}
+      >
+        <div className="bg-white shadow rounded-lg p-2 sm:p-3 flex flex-col items-center min-w-[160px]">
+          <div className="flex items-center justify-between w-full">
+            <TeamCell
+              team={match.home}
+              goals={hg}
+              editable={isAdmin}
+              onChange={(val) => updateMatch(round, index, val, ag)}
+            />
+            <span className="font-bold text-gray-700 text-xs sm:text-base px-2">
+              VS
+            </span>
+            <TeamCell
+              team={match.away}
+              goals={ag}
+              editable={isAdmin}
+              onChange={(val) => updateMatch(round, index, hg, val)}
+            />
+          </div>
+          {match.winner && (
+            <p className="mt-2 text-xs sm:text-sm font-bold text-green-600">
+              GANADOR: {match.winner?.name}
+            </p>
+          )}
         </div>
-        {match.winner && (
-          <p className="mt-2 text-xs sm:text-sm font-semibold text-green-600">
-            Ganador: {match.winner?.name}
-          </p>
-        )}
       </div>
     );
   };
 
+  // obtener campeón
+  const champion = bracket?.final?.[0]?.winner;
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-6 text-black">
-      <h2 className="text-2xl font-bold text-center mb-6">🏆 Ronda Final</h2>
+    <div className="w-full max-w-7xl mx-auto px-4 py-6">
+      <h2 className="text-2xl font-bold text-center mb-6 text-white">
+        🏆 RONDA FINAL
+      </h2>
 
       {/* selector de torneo */}
       <div className="bg-white shadow-md rounded-lg p-4 mb-6">
@@ -160,7 +175,7 @@ const FinalsPage = () => {
           onChange={handleTournamentChange}
           className="border p-2 rounded w-full text-black"
         >
-          <option value="">-- Selecciona un torneo --</option>
+          <option value="">-- SELECCIONA UN TORNEO --</option>
           {tournaments.map((t) => (
             <option key={t._id} value={t._id}>
               {t.name}
@@ -173,51 +188,102 @@ const FinalsPage = () => {
             onClick={initBracket}
             className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            Iniciar Bracket con Top 8
+            INICIAR BRACKET CON TOP 8
           </button>
         )}
       </div>
 
-      {loading && <p className="text-center text-gray-600">Cargando...</p>}
+      {loading && <p className="text-center text-gray-600">CARGANDO...</p>}
 
-      {/* Bracket estilo Libertadores */}
+      {/* Bracket en árbol */}
       {bracket && (
         <div className="flex flex-col sm:flex-row justify-between gap-8">
-          {/* Lado Izquierdo */}
-          <div className="flex flex-col gap-10">
-            <h3 className="text-center font-bold">Lado A</h3>
+          {/* Lado A */}
+          <div className="flex flex-col gap-10 items-center">
+            <h3 className="text-center font-bold text-white mb-2">LADO A</h3>
+            <h4 className="text-sm font-bold text-white mb-2">CUARTOS</h4>
             {bracket.quarters?.slice(0, 2).map((m, i) => (
-              <div key={`qA${i}`} className="bracket-connector-right">
-                <MatchCard round="quarters" index={i} match={m} />
-              </div>
+              <MatchCard
+                key={`qA${i}`}
+                round="quarters"
+                index={i}
+                match={m}
+                side="left"
+              />
             ))}
+            <h4 className="text-sm font-bold text-white mt-6">SEMIFINAL</h4>
             {bracket.semis?.[0] && (
-              <div className="bracket-connector-right-strong">
-                <MatchCard round="semis" index={0} match={bracket.semis[0]} />
-              </div>
+              <MatchCard
+                round="semis"
+                index={0}
+                match={bracket.semis[0]}
+                side="left"
+              />
             )}
           </div>
 
           {/* Final */}
-          <div className="flex flex-col justify-center items-center">
-            <h3 className="text-center font-bold">Gran Final</h3>
+          <div className="flex flex-col items-center justify-center relative">
+            <h3 className="text-center font-bold mb-2 text-white">GRAN FINAL</h3>
             {bracket.final?.[0] && (
-              <MatchCard round="final" index={0} match={bracket.final[0]} />
+              <div className="match-card bracket-connector-final">
+                {/* Línea vertical izquierda */}
+                <div className="final-vertical-left"></div>
+
+                <MatchCard
+                  round="final"
+                  index={0}
+                  match={bracket.final[0]}
+                  final={true}
+                />
+
+                {/* Línea vertical derecha */}
+                <div className="final-vertical-right"></div>
+              </div>
+            )}
+
+            {champion && (
+              <div className="mt-6 bg-white shadow-lg rounded-lg p-4 flex flex-col items-center w-60">
+                <img
+                  src={champion.logo || "/default-logo.png"}
+                  alt={champion.name}
+                  className="w-20 h-20 rounded-full border object-cover mb-3"
+                />
+                <h4 className="font-bold text-lg text-yellow-600 text-center">
+                  🏆 CAMPEÓN
+                </h4>
+                <p className="text-black font-semibold">{champion.name}</p>
+                <img
+                  src="/trophy.png"
+                  alt="Trofeo"
+                  className="w-16 h-16 mt-3"
+                  onError={(e) => (e.target.style.display = "none")}
+                />
+              </div>
             )}
           </div>
 
-          {/* Lado Derecho */}
-          <div className="flex flex-col gap-10">
-            <h3 className="text-center font-bold">Lado B</h3>
+          {/* Lado B */}
+          <div className="flex flex-col gap-10 items-center">
+            <h3 className="text-center font-bold text-white mb-2">LADO B</h3>
+            <h4 className="text-sm font-bold text-white mb-2">CUARTOS</h4>
             {bracket.quarters?.slice(2, 4).map((m, i) => (
-              <div key={`qB${i}`} className="bracket-connector-left">
-                <MatchCard round="quarters" index={i + 2} match={m} />
-              </div>
+              <MatchCard
+                key={`qB${i}`}
+                round="quarters"
+                index={i + 2}
+                match={m}
+                side="right"
+              />
             ))}
+            <h4 className="text-sm font-bold text-white mt-6">SEMIFINAL</h4>
             {bracket.semis?.[1] && (
-              <div className="bracket-connector-left-strong">
-                <MatchCard round="semis" index={1} match={bracket.semis[1]} />
-              </div>
+              <MatchCard
+                round="semis"
+                index={1}
+                match={bracket.semis[1]}
+                side="right"
+              />
             )}
           </div>
         </div>
@@ -227,6 +293,3 @@ const FinalsPage = () => {
 };
 
 export default FinalsPage;
-
-
-

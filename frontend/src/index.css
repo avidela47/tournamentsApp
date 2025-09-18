@@ -1,52 +1,99 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-body { @apply text-white; background-image: url('https://www.shutterstock.com/image-illustration/3d-render-open-air-football-600nw-2472453001.jpg'); background-size: cover; background-position: center; background-attachment: fixed; }
-/* === Bracket doble árbol estilo Libertadores === */
 
-/* Conectores lado A (derecha) */
+body {
+  @apply text-white;
+  background-image: url("https://www.shutterstock.com/image-illustration/3d-render-open-air-football-600nw-2472453001.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* === BRACKET ÁRBOL ESTILO LIBERTADORES === */
+
+/* ===== Lado A (derecha) ===== */
 .bracket-connector-right {
   position: relative;
 }
 .bracket-connector-right::after {
   content: "";
   position: absolute;
+  right: -30px;
   top: 50%;
-  left: 100%;
-  width: 40px;
+  width: 30px;
   height: 2px;
-  background: #4b5563;
+  background: white;
 }
-.bracket-connector-right-strong::after {
+.bracket-connector-right::before {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 100%;
-  width: 60px;
-  height: 2px;
-  background: #1f2937;
+  right: -30px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background: white;
 }
 
-/* Conectores lado B (izquierda) */
+/* ===== Lado B (izquierda) ===== */
 .bracket-connector-left {
   position: relative;
+}
+.bracket-connector-left::after {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 50%;
+  width: 30px;
+  height: 2px;
+  background: white;
 }
 .bracket-connector-left::before {
   content: "";
   position: absolute;
-  top: 50%;
-  right: 100%;
-  width: 40px;
-  height: 2px;
-  background: #4b5563;
+  left: -30px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background: white;
 }
-.bracket-connector-left-strong::before {
+
+/* ===== GRAN FINAL ===== */
+.match-card.bracket-connector-final {
+  position: relative;
+  margin: 0 auto;
+}
+
+/* horizontales de la final */
+.match-card.bracket-connector-final::before,
+.match-card.bracket-connector-final::after {
   content: "";
   position: absolute;
   top: 50%;
-  right: 100%;
-  width: 60px;
+  width: 60px; /* largo de las líneas laterales */
   height: 2px;
-  background: #1f2937;
+  background: white;
 }
+.match-card.bracket-connector-final::before {
+  left: -60px; /* conecta desde la semi izquierda */
+}
+.match-card.bracket-connector-final::after {
+  right: -60px; /* conecta desde la semi derecha */
+}
+
+/* verticales de la final */
+.match-card.bracket-connector-final .final-vertical-left,
+.match-card.bracket-connector-final .final-vertical-right {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 60px; /* largo hacia abajo, ajustá a tu gusto */
+  background: white;
+}
+.match-card.bracket-connector-final .final-vertical-left {
+  left: -60px;
+}
+.match-card.bracket-connector-final .final-vertical-right {
+  right: -60px;
+}
+

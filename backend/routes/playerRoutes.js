@@ -43,12 +43,22 @@ router.get("/:id", verifyToken, async (req, res) => {
 // ============================
 router.post("/", verifyToken, isAdmin, async (req, res) => {
   try {
-    const { name, number, position, team } = req.body;
+    const { name, number, position, team, photo } = req.body;
 
     const t = await Team.findById(team);
     if (!t) return res.status(400).json({ message: "Equipo inválido" });
 
-    const player = await Player.create({ name, number, position, team });
+    const player = await Player.create({
+      name,
+      number,
+      position,
+      photo,
+      team,
+      goals: 0,
+      yellowCards: 0,
+      redCards: 0,
+    });
+
     const populated = await player.populate({
       path: "team",
       select: "name logo tournament",
@@ -66,7 +76,7 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
 // ============================
 router.put("/:id", verifyToken, isAdmin, async (req, res) => {
   try {
-    const { name, number, position, team } = req.body;
+    const { name, number, position, team, photo } = req.body;
 
     if (team) {
       const t = await Team.findById(team);
@@ -75,7 +85,7 @@ router.put("/:id", verifyToken, isAdmin, async (req, res) => {
 
     const updated = await Player.findByIdAndUpdate(
       req.params.id,
-      { name, number, position, team },
+      { name, number, position, team, photo },
       { new: true, runValidators: true }
     ).populate({
       path: "team",
@@ -91,6 +101,34 @@ router.put("/:id", verifyToken, isAdmin, async (req, res) => {
 });
 
 // ============================
+// Actualizar estadísticas del jugador (solo admin)
+// ============================
+router.patch("/:id/stats", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { goals, yellowCards, redCards } = req.body;
+
+    const updated = await Player.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...(goals !== undefined && { goals }),
+        ...(yellowCards !== undefined && { yellowCards }),
+        ...(redCards !== undefined && { redCards }),
+      },
+      { new: true, runValidators: true }
+    ).populate({
+      path: "team",
+      select: "name logo tournament",
+      populate: { path: "tournament", select: "name logo" },
+    });
+
+    if (!updated) return res.status(404).json({ message: "Jugador no encontrado" });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: "Error al actualizar estadísticas", error: err.message });
+  }
+});
+
+// ============================
 // Eliminar jugador (solo admin)
 // ============================
 router.delete("/:id", verifyToken, isAdmin, async (req, res) => {
@@ -100,6 +138,34 @@ router.delete("/:id", verifyToken, isAdmin, async (req, res) => {
     res.json({ message: "Jugador eliminado" });
   } catch (err) {
     res.status(500).json({ message: "Error al eliminar jugador", error: err.message });
+  }
+});
+
+// ============================
+// Listar jugadores de un torneo (logueados)
+// ============================
+router.get("/tournament/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // buscamos jugadores cuyo equipo pertenezca al torneo
+    const players = await Player.find()
+      .populate({
+        path: "team",
+        select: "name logo tournament",
+        populate: { path: "tournament", select: "name logo" },
+      })
+      .where("team")
+      .in(
+        await Team.find({ tournament: id }).distinct("_id")
+      );
+
+    res.json(players);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error al obtener jugadores del torneo",
+      error: err.message,
+    });
   }
 });
 

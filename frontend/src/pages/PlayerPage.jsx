@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext.jsx"; // ⬅️ importamos el contexto
+import { useAuth } from "../context/AuthContext.jsx"; // contexto de auth
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const PlayerPage = () => {
-  const { auth } = useAuth();              // ⬅️ usamos auth del contexto
-  const isAdmin = auth?.role === "admin";  // ⬅️ check de rol
+  const { auth } = useAuth();
+  const isAdmin = auth?.role === "admin";
 
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -31,7 +31,7 @@ const PlayerPage = () => {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth?.token}`, // ⬅️ añadimos token
+        Authorization: `Bearer ${auth?.token}`,
         ...options.headers,
       },
     });
@@ -102,7 +102,7 @@ const PlayerPage = () => {
       yellowCards: player.yellowCards,
       redCards: player.redCards,
       team: player.team?._id || "",
-      tournament: player.team?.tournament || "",
+      tournament: player.team?.tournament?._id || "",
     });
     setEditingId(player._id);
   };
@@ -112,6 +112,9 @@ const PlayerPage = () => {
     await loadPlayers();
   };
 
+  // ============================
+  // Guardar estadísticas
+  // ============================
   const handleUpdateStats = async (id) => {
     const stats = updatingStats[id];
     if (!stats) return;
@@ -356,5 +359,6 @@ const PlayerPage = () => {
 };
 
 export default PlayerPage;
+
 
 

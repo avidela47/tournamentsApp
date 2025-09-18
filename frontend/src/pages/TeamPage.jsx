@@ -144,7 +144,8 @@ const TeamPage = () => {
             />
             <h3 className="text-2xl font-bold">{tournament.name}</h3>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {/* 📌 Cambié grid-cols-1 → grid-cols-2 */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {tournament.teams.length === 0 ? (
               <p className="text-gray-500 col-span-full text-center">
                 No hay equipos en este torneo.
@@ -189,5 +190,6 @@ const TeamPage = () => {
 };
 
 export default TeamPage;
+
 
 

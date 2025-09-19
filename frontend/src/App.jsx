@@ -1,14 +1,14 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
-
+import LandingPage from "./pages/LandingPage.jsx"; // 👈 pública
 import HomePage from "./pages/HomePage.jsx";
 import TeamPage from "./pages/TeamPage.jsx";
 import PlayerPage from "./pages/PlayerPage.jsx";
 import MatchPage from "./pages/MatchPage.jsx";
 import TournamentPage from "./pages/TournamentPage.jsx";
 import StandingsPage from "./pages/StandingsPage.jsx";
-import FinalsPage from "./pages/FinalsPage.jsx"; // ⬅️ agregado
+import FinalsPage from "./pages/FinalsPage.jsx";
 
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
@@ -24,12 +24,13 @@ function App() {
         <div className="pt-16">
           <Routes>
             {/* Páginas públicas */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
             {/* Páginas protegidas */}
             <Route
-              path="/"
+              path="/home"
               element={
                 <Protected>
                   <HomePage />

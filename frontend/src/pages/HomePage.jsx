@@ -16,7 +16,7 @@ const HomePage = () => {
   return (
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6 text-black text-center">
-        Bienvenido a <span className="text-blue-600">Tournaments App</span>
+        Bienvenido a <span className="text-blue-600">Super League7</span>
       </h1>
       <p className="text-lg mb-8 text-gray-700 text-center max-w-xl">
         Administra tus equipos, jugadores, partidos, torneos, posiciones y rondas finales.

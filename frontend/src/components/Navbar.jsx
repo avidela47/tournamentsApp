@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import logo from "../assets/logo.png"; // 👈 Ajusta la ruta según dónde guardaste el logo
 
 const Navbar = () => {
   const { auth, logout } = useAuth();
@@ -13,16 +14,21 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-blue-600 text-white shadow-md z-50">
+    <nav className="fixed top-0 left-0 w-full bg-transparent text-white shadow-md z-50">
       <div className="container mx-auto flex justify-between items-center p-4">
-        {/* Logo */}
-        <Link to="/" className="font-bold text-lg">
-          Tournaments App
+        {/* Logo + Texto */}
+        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+          <img
+            src={logo}
+            alt="Logo Super League7"
+            className="w-8 h-8 md:w-10 md:h-10 object-contain"
+          />
+          <span className="hidden sm:inline">Super League7</span>
         </Link>
 
         {/* Botón hamburguesa (solo visible en móviles) */}
         <button
-          className="md:hidden flex items-center px-3 py-2 border rounded text-white border-white hover:bg-blue-700"
+          className="md:hidden flex items-center px-3 py-2 border rounded text-white border-white hover:bg-white/20"
           onClick={() => setMenuOpen(!menuOpen)}
         >
           {menuOpen ? "✖" : "☰"}
@@ -31,7 +37,7 @@ const Navbar = () => {
         {/* Menú principal */}
         <div
           className={`${
-            menuOpen ? "block" : "hidden"
+            menuOpen ? "block bg-black/70 md:bg-transparent" : "hidden"
           } w-full md:flex md:items-center md:w-auto`}
         >
           <div className="flex flex-col md:flex-row md:space-x-4 mt-4 md:mt-0">
@@ -121,5 +127,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
 
